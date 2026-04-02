@@ -1,0 +1,286 @@
+Shower
+Bathroom
+Eating
+Drinking water
+Sleeping
+Resting
+Walking
+Exercise
+Stretching
+Work
+Studying
+Reading
+Cleaning
+Cooking
+Commuting
+Shopping
+Socializing
+Screen time
+Medication
+Prayer or mindfulness
+Hobbies
+Childcare
+Outdoor time
+Personal care
+
+Suggested subcategories for each:
+
+Shower
+
+Quick rinse
+Full shower
+Hair wash
+Skincare
+Morning routine
+Night routine
+
+Exercise
+
+Cardio
+Strength
+HIIT
+Home workout
+Gym workout
+Sports
+Mobility
+Recovery session
+
+Bathroom
+
+Toilet
+Brush teeth
+Wash face
+Grooming
+Menstrual care
+Hygiene routine
+
+Eating
+
+Breakfast
+Lunch
+Dinner
+Snack
+Dessert
+Eating out
+Meal prep
+Healthy meal
+
+Walking
+
+Indoor walking
+Outdoor walking
+Leisure walk
+Fast walk
+Dog walk
+Errand walk
+Post-meal walk
+
+Cleaning
+
+Dishes
+Laundry
+Vacuuming
+Mopping
+Organizing
+Bathroom cleaning
+Kitchen cleaning
+Room reset
+
+Sleeping
+
+Night sleep
+Nap
+Deep sleep
+Interrupted sleep
+Early sleep
+Late sleep
+
+Reading
+
+Book
+Quran
+Study material
+Articles
+Fiction
+Nonfiction
+Audiobook
+Work reading
+
+Work
+
+Deep work
+Meetings
+Emails
+Admin
+Creative work
+Client work
+Planning
+Calls
+
+Stretching
+
+Morning stretch
+Post-workout stretch
+Neck and back
+Full body
+Yoga flow
+Mobility drill
+
+Suggested subcategories for the new activities:
+
+Drinking water
+
+Small glass
+Bottle finished
+Electrolytes
+Hydration reminder
+
+Resting
+
+Lying down
+Relaxing
+Break
+Recovery
+Quiet time
+
+Studying
+
+Homework
+Revision
+Reading notes
+Practice questions
+Online course
+
+Cooking
+
+Breakfast prep
+Lunch prep
+Dinner prep
+Baking
+Meal prep
+Cleanup after cooking
+
+Commuting
+
+Driving
+Ride share
+Bus
+Walking commute
+Travel between places
+
+Shopping
+
+Groceries
+Household
+Personal items
+Online shopping
+Pharmacy
+
+Socializing
+
+Family
+Friends
+Guests
+Phone call
+Group outing
+
+Screen time
+
+Social media
+TV
+YouTube
+Gaming
+Browsing
+Work screen time
+
+Medication
+
+Morning meds
+Night meds
+Vitamins
+Pain relief
+Refill taken
+
+Prayer or mindfulness
+
+Prayer
+Dhikr
+Meditation
+Breathing exercise
+Reflection
+
+Hobbies
+
+Drawing
+Music
+Writing
+Photography
+Gaming
+Crafts
+
+Childcare
+
+Feeding
+Bathing child
+Homework help
+Playtime
+Sleep routine
+
+Outdoor time
+
+Park
+Sunlight
+Garden
+Sitting outside
+Nature walk
+
+Personal care
+
+Skincare
+Haircare
+Makeup
+Grooming
+Nail care
+Getting dressed
+
+Best structure for the app:
+
+Use 4 main groups.
+
+Body
+
+Shower
+Bathroom
+Eating
+Drinking water
+Sleeping
+Stretching
+Exercise
+Medication
+Personal care
+
+Productivity
+
+Work
+Studying
+Reading
+Commuting
+
+Home
+
+Cleaning
+Cooking
+Shopping
+Childcare
+
+Lifestyle
+
+Walking
+Resting
+Socializing
+Screen time
+Prayer or mindfulness
+Hobbies
+Outdoor time
+
+This would make tracking cleaner and reduce overlap.
