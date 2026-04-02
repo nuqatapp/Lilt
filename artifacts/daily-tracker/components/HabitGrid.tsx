@@ -5,6 +5,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -28,30 +29,29 @@ const GROUP_ICONS: Record<Habit["group"], string> = {
 
 interface HabitGridProps {
   habits: Habit[];
+  favoriteIds: string[];
   onLog: (habit: Habit, subHabit?: SubHabit, notes?: string) => void;
   onDelete?: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
 }
 
 interface PopupState {
   habit: Habit;
   selectedSub: SubHabit | null;
-  notes: string;
 }
 
 const DOUBLE_TAP_MS = 300;
 
-export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
+export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavorite }: HabitGridProps) {
   const colors = useColors();
   const [popup, setPopup] = useState<PopupState | null>(null);
   const [deletePopup, setDeletePopup] = useState<Habit | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
-  const cellRefs = useRef<Record<string, View | null>>({});
   const lastTap = useRef<Record<string, number>>({});
 
-  // Double-tap → instant log (no notes)
   const handlePress = useCallback(
     (habit: Habit) => {
-      if (habit.subHabits.length > 0) return; // long-press only for sub-habits
+      if (habit.subHabits.length > 0) return;
       const now = Date.now();
       const last = lastTap.current[habit.id] ?? 0;
       if (now - last < DOUBLE_TAP_MS) {
@@ -68,7 +68,6 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
     [onLog]
   );
 
-  // Long-press → opens log popup with notes (and sub-habit picker if applicable)
   const handleLongPress = useCallback(
     (habit: Habit) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -76,7 +75,7 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
       if (habit.isCustom && habit.subHabits.length === 0) {
         setDeletePopup(habit);
       } else {
-        setPopup({ habit, selectedSub: null, notes: "" });
+        setPopup({ habit, selectedSub: null });
       }
     },
     []
@@ -85,11 +84,7 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
   const handleSubmitLog = useCallback(() => {
     if (!popup) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onLog(
-      popup.habit,
-      popup.selectedSub ?? undefined,
-      popup.notes.trim() || undefined
-    );
+    onLog(popup.habit, popup.selectedSub ?? undefined);
     setPopup(null);
   }, [popup, onLog]);
 
@@ -100,67 +95,102 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
     setDeletePopup(null);
   }, [deletePopup, onDelete]);
 
+  const favorites = habits.filter((h) => favoriteIds.includes(h.id));
+
   const grouped = GROUPS.map((group) => ({
     group,
     items: habits.filter((h) => h.group === group || (!h.group && group === "Lifestyle")),
   })).filter((g) => g.items.length > 0);
 
+  const renderCell = (habit: Habit, compact = false) => {
+    const isFav = favoriteIds.includes(habit.id);
+    const cellW = compact ? CELL_SIZE : "100%";
+    return (
+      <Pressable
+        key={habit.id}
+        onPress={() => handlePress(habit)}
+        onLongPress={() => handleLongPress(habit)}
+        delayLongPress={400}
+        style={({ pressed }) => [
+          styles.cell,
+          {
+            width: cellW,
+            backgroundColor: flash === habit.id ? habit.color + "18" : colors.card,
+            borderColor: flash === habit.id ? habit.color : isFav ? habit.color + "80" : colors.border,
+            opacity: pressed ? 0.82 : 1,
+          },
+        ]}
+      >
+        {isFav && !compact && (
+          <View style={[styles.favBadge, { backgroundColor: habit.color + "30" }]}>
+            <MaterialCommunityIcons name="star" size={8} color={habit.color} />
+          </View>
+        )}
+        <View style={[styles.iconWrap, { backgroundColor: habit.color + "22" }]}>
+          <MaterialCommunityIcons name={habit.icon as any} size={26} color={habit.color} />
+        </View>
+        <Text style={[styles.cellLabel, { color: colors.foreground }]} numberOfLines={1}>
+          {habit.name}
+        </Text>
+        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+          {habit.subHabits.length > 0 ? "long-press" : "double-tap"}
+        </Text>
+        {habit.isCustom && (
+          <View style={[styles.customBadge, { backgroundColor: habit.color + "30" }]}>
+            <MaterialCommunityIcons name="pencil-outline" size={8} color={habit.color} />
+          </View>
+        )}
+      </Pressable>
+    );
+  };
+
   return (
     <View style={styles.container}>
+      {/* ── Favourites ──────────────────────────────────────── */}
+      {favorites.length === 0 ? (
+        <View style={[styles.emptyFav, { borderColor: colors.border, backgroundColor: colors.card }]}>
+          <MaterialCommunityIcons name="star-outline" size={22} color={colors.mutedForeground} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.emptyFavTitle, { color: colors.foreground }]}>No favourites yet</Text>
+            <Text style={[styles.emptyFavSub, { color: colors.mutedForeground }]}>
+              Long-press any habit and tap ☆ to pin it here
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="star" size={13} color="#e8b84b" />
+            <Text style={[styles.sectionLabel, { color: "#c49830" }]}>FAVOURITES</Text>
+          </View>
+          <View style={styles.grid}>
+            {favorites.map((h) => (
+              <View key={h.id} style={[styles.cellWrap, { width: CELL_SIZE }]}>
+                {renderCell(h)}
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* ── Grouped habits ───────────────────────────────────── */}
       {grouped.map(({ group, items }) => (
         <View key={group} style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons
-              name={GROUP_ICONS[group] as any}
-              size={13}
-              color={colors.mutedForeground}
-            />
-            <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
-              {group}
-            </Text>
+            <MaterialCommunityIcons name={GROUP_ICONS[group] as any} size={13} color={colors.mutedForeground} />
+            <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{group.toUpperCase()}</Text>
           </View>
           <View style={styles.grid}>
             {items.map((habit) => (
-              <View
-                key={habit.id}
-                ref={(r) => { cellRefs.current[habit.id] = r; }}
-                style={[styles.cellWrap, { width: CELL_SIZE }]}
-              >
-                <Pressable
-                  onPress={() => handlePress(habit)}
-                  onLongPress={() => handleLongPress(habit)}
-                  delayLongPress={400}
-                  style={({ pressed }) => [
-                    styles.cell,
-                    {
-                      backgroundColor: flash === habit.id ? habit.color + "18" : colors.card,
-                      borderColor: flash === habit.id ? habit.color : colors.border,
-                      opacity: pressed ? 0.82 : 1,
-                    },
-                  ]}
-                >
-                  <View style={[styles.iconWrap, { backgroundColor: habit.color + "22" }]}>
-                    <MaterialCommunityIcons name={habit.icon as any} size={26} color={habit.color} />
-                  </View>
-                  <Text style={[styles.cellLabel, { color: colors.foreground }]} numberOfLines={1}>
-                    {habit.name}
-                  </Text>
-                  <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-                    {habit.subHabits.length > 0 ? "long-press" : "double-tap"}
-                  </Text>
-                  {habit.isCustom && (
-                    <View style={[styles.customBadge, { backgroundColor: habit.color + "30" }]}>
-                      <MaterialCommunityIcons name="pencil-outline" size={8} color={habit.color} />
-                    </View>
-                  )}
-                </Pressable>
+              <View key={habit.id} style={[styles.cellWrap, { width: CELL_SIZE }]}>
+                {renderCell(habit)}
               </View>
             ))}
           </View>
         </View>
       ))}
 
-      {/* ── Log popup (sub-habits + notes) ─────────────────────── */}
+      {/* ── Log popup (sub-habits) ─────────────────────────── */}
       {popup && (
         <Modal
           transparent
@@ -174,8 +204,9 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
           >
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setPopup(null)} />
             <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              {/* Header */}
               <View style={styles.sheetHandle} />
+
+              {/* Header row with star toggle */}
               <View style={styles.sheetHeaderRow}>
                 <View style={[styles.sheetHabitIcon, { backgroundColor: popup.habit.color + "22" }]}>
                   <MaterialCommunityIcons name={popup.habit.icon as any} size={20} color={popup.habit.color} />
@@ -190,7 +221,32 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
                     </Text>
                   )}
                 </View>
-                <Pressable onPress={() => setPopup(null)} hitSlop={10}>
+                {/* Favourite star */}
+                <Pressable
+                  onPress={() => {
+                    onToggleFavorite(popup.habit.id);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  style={[
+                    styles.starBtn,
+                    {
+                      backgroundColor: favoriteIds.includes(popup.habit.id)
+                        ? "#e8b84b30"
+                        : colors.background,
+                      borderColor: favoriteIds.includes(popup.habit.id)
+                        ? "#e8b84b"
+                        : colors.border,
+                    },
+                  ]}
+                  hitSlop={6}
+                >
+                  <MaterialCommunityIcons
+                    name={favoriteIds.includes(popup.habit.id) ? "star" : "star-outline"}
+                    size={18}
+                    color={favoriteIds.includes(popup.habit.id) ? "#e8b84b" : colors.mutedForeground}
+                  />
+                </Pressable>
+                <Pressable onPress={() => setPopup(null)} hitSlop={10} style={{ marginLeft: 4 }}>
                   <MaterialCommunityIcons name="close" size={20} color={colors.mutedForeground} />
                 </Pressable>
               </View>
@@ -201,45 +257,49 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
                   <Text style={[styles.sheetSectionLabel, { color: colors.mutedForeground }]}>
                     SELECT CATEGORY
                   </Text>
-                  <View style={styles.subRow}>
-                    {popup.habit.subHabits.map((sub) => {
-                      const selected = popup.selectedSub?.id === sub.id;
-                      return (
-                        <Pressable
-                          key={sub.id}
-                          onPress={() =>
-                            setPopup((p) =>
-                              p ? { ...p, selectedSub: selected ? null : sub } : null
-                            )
-                          }
-                          style={[
-                            styles.subChip,
-                            {
-                              backgroundColor: selected ? sub.color + "25" : colors.background,
-                              borderColor: selected ? sub.color : colors.border,
-                            },
-                          ]}
-                        >
-                          <MaterialCommunityIcons
-                            name={sub.icon as any}
-                            size={14}
-                            color={selected ? sub.color : colors.mutedForeground}
-                          />
-                          <Text
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    style={{ maxHeight: 220 }}
+                    nestedScrollEnabled
+                  >
+                    <View style={styles.subRow}>
+                      {popup.habit.subHabits.map((sub) => {
+                        const selected = popup.selectedSub?.id === sub.id;
+                        return (
+                          <Pressable
+                            key={sub.id}
+                            onPress={() =>
+                              setPopup((p) => p ? { ...p, selectedSub: selected ? null : sub } : null)
+                            }
                             style={[
-                              styles.subChipText,
+                              styles.subChip,
                               {
-                                color: selected ? sub.color : colors.foreground,
-                                fontFamily: selected ? "Inter_600SemiBold" : "Inter_400Regular",
+                                backgroundColor: selected ? sub.color + "25" : colors.background,
+                                borderColor: selected ? sub.color : colors.border,
                               },
                             ]}
                           >
-                            {sub.label}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
+                            <MaterialCommunityIcons
+                              name={sub.icon as any}
+                              size={14}
+                              color={selected ? sub.color : colors.mutedForeground}
+                            />
+                            <Text
+                              style={[
+                                styles.subChipText,
+                                {
+                                  color: selected ? sub.color : colors.foreground,
+                                  fontFamily: selected ? "Inter_600SemiBold" : "Inter_400Regular",
+                                },
+                              ]}
+                            >
+                              {sub.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
                 </View>
               )}
 
@@ -258,7 +318,7 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
         </Modal>
       )}
 
-      {/* ── Delete popup ───────────────────────────────────────── */}
+      {/* ── Delete popup ───────────────────────────────────── */}
       {deletePopup && (
         <Modal transparent animationType="fade" onRequestClose={() => setDeletePopup(null)}>
           <Pressable style={styles.overlayCenter} onPress={() => setDeletePopup(null)}>
@@ -267,9 +327,7 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
                 <MaterialCommunityIcons name={deletePopup.icon as any} size={30} color={deletePopup.color} />
               </View>
               <Text style={[styles.deleteHabitName, { color: colors.foreground }]}>{deletePopup.name}</Text>
-              <Text style={[styles.deleteHint, { color: colors.mutedForeground }]}>
-                Remove this custom habit?
-              </Text>
+              <Text style={[styles.deleteHint, { color: colors.mutedForeground }]}>Remove this custom habit?</Text>
               <View style={styles.deleteActions}>
                 <Pressable onPress={() => setDeletePopup(null)} style={[styles.deleteBtn, { borderColor: colors.border }]}>
                   <Text style={[styles.deleteBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
@@ -291,11 +349,11 @@ const styles = StyleSheet.create({
   container: { gap: 18 },
   section: { gap: 8, paddingHorizontal: 16 },
   sectionHeader: { flexDirection: "row", alignItems: "center", gap: 5 },
-  sectionLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 1 },
+  sectionLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 1 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   cellWrap: { alignItems: "center" },
   cell: {
-    width: "100%", borderRadius: 12, borderWidth: 1, padding: 8,
+    borderRadius: 12, borderWidth: 1, padding: 8,
     alignItems: "center", gap: 4, minHeight: 80, justifyContent: "center",
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
@@ -303,12 +361,22 @@ const styles = StyleSheet.create({
   iconWrap: { width: 44, height: 44, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   cellLabel: { fontSize: 10, fontFamily: "Inter_500Medium", textAlign: "center" },
   hint: { fontSize: 8, fontFamily: "Inter_400Regular" },
+  favBadge: {
+    position: "absolute", top: 5, left: 5, width: 14, height: 14,
+    borderRadius: 7, alignItems: "center", justifyContent: "center",
+  },
   customBadge: {
     position: "absolute", top: 5, right: 5, width: 14, height: 14,
     borderRadius: 7, alignItems: "center", justifyContent: "center",
   },
-
-  // Sheet (log popup)
+  emptyFav: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    marginHorizontal: 16, borderRadius: 12, borderWidth: 1,
+    borderStyle: "dashed", paddingHorizontal: 14, paddingVertical: 12,
+  },
+  emptyFavTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  emptyFavSub: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
+  // Sheet
   sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)", justifyContent: "flex-end" },
   sheet: {
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -318,11 +386,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15, shadowRadius: 16, elevation: 20,
   },
   sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#d0ccc8", alignSelf: "center", marginBottom: 4 },
-  sheetHeaderRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  sheetHeaderRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   sheetHabitIcon: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   sheetHabitName: { fontSize: 17, fontFamily: "Inter_700Bold" },
   sheetSubSelected: { fontSize: 12, fontFamily: "Inter_500Medium", marginTop: 1 },
   sheetSectionLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 },
+  starBtn: { width: 36, height: 36, borderRadius: 10, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   subRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   subChip: {
     flexDirection: "row", alignItems: "center", gap: 5,
@@ -335,8 +404,7 @@ const styles = StyleSheet.create({
     gap: 8, borderRadius: 14, paddingVertical: 14,
   },
   logBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-
-  // Delete popup
+  // Delete
   overlayCenter: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)", alignItems: "center", justifyContent: "center" },
   deleteCard: {
     width: 260, borderRadius: 18, borderWidth: 1, padding: 20, gap: 10, alignItems: "center",

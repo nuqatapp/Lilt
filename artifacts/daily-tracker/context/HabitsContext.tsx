@@ -27,12 +27,15 @@ export interface Habit {
 
 interface HabitsContextValue {
   habits: Habit[];
+  favoriteIds: string[];
+  toggleFavorite: (id: string) => void;
   addCustomHabit: (name: string, icon: string, color: string) => void;
   removeHabit: (id: string) => void;
 }
 
 const HabitsContext = createContext<HabitsContextValue | null>(null);
 const CUSTOM_KEY = "@trace_custom_habits_v1";
+const FAVORITES_KEY = "@trace_favorites_v1";
 
 const DEFAULT_HABITS: Habit[] = [
   // ── Body ──────────────────────────────────────────────────────────────
@@ -430,16 +433,28 @@ const DEFAULT_HABITS: Habit[] = [
 
 export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const [customHabits, setCustomHabits] = useState<Habit[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   useEffect(() => {
     AsyncStorage.getItem(CUSTOM_KEY)
       .then((v) => { if (v) setCustomHabits(JSON.parse(v)); })
+      .catch(() => {});
+    AsyncStorage.getItem(FAVORITES_KEY)
+      .then((v) => { if (v) setFavoriteIds(JSON.parse(v)); })
       .catch(() => {});
   }, []);
 
   const save = useCallback(async (h: Habit[]) => {
     setCustomHabits(h);
     await AsyncStorage.setItem(CUSTOM_KEY, JSON.stringify(h));
+  }, []);
+
+  const toggleFavorite = useCallback((id: string) => {
+    setFavoriteIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
   }, []);
 
   const addCustomHabit = useCallback(
@@ -467,7 +482,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const habits = [...DEFAULT_HABITS, ...customHabits];
 
   return (
-    <HabitsContext.Provider value={{ habits, addCustomHabit, removeHabit }}>
+    <HabitsContext.Provider value={{ habits, favoriteIds, toggleFavorite, addCustomHabit, removeHabit }}>
       {children}
     </HabitsContext.Provider>
   );

@@ -30,7 +30,7 @@ function formatLogTime(d: Date) {
 
 export function LogActivityView() {
   const colors = useColors();
-  const { habits, addCustomHabit, removeHabit } = useHabits();
+  const { habits, favoriteIds, toggleFavorite, addCustomHabit, removeHabit } = useHabits();
   const { addLog } = useLogs();
   const [lastLogged, setLastLogged] = useState<Date | null>(null);
   const [lastLabel, setLastLabel] = useState<string>("");
@@ -80,7 +80,13 @@ export function LogActivityView() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <HabitGrid habits={habits} onLog={handleLog} onDelete={removeHabit} />
+        <HabitGrid
+          habits={habits}
+          favoriteIds={favoriteIds}
+          onLog={handleLog}
+          onDelete={removeHabit}
+          onToggleFavorite={toggleFavorite}
+        />
 
         {/* Last logged indicator */}
         {lastLogged && (
