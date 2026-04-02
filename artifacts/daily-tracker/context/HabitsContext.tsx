@@ -26,7 +26,7 @@ export interface Habit {
 
 interface HabitsContextValue {
   habits: Habit[];
-  addCustomHabit: (name: string) => void;
+  addCustomHabit: (name: string, icon: string, color: string) => void;
   removeHabit: (id: string) => void;
 }
 
@@ -144,13 +144,13 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addCustomHabit = useCallback(
-    (name: string) => {
+    (name: string, icon: string, color: string) => {
       const newH: Habit = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
         name,
-        icon: "star",
+        icon,
         iconSet: "MaterialCommunityIcons",
-        color: "#b0a090",
+        color,
         subHabits: [],
         isCustom: true,
       };

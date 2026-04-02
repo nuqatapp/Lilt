@@ -27,7 +27,7 @@ function formatLogTime(d: Date) {
 
 export function LogActivityView() {
   const colors = useColors();
-  const { habits, addCustomHabit } = useHabits();
+  const { habits, addCustomHabit, removeHabit } = useHabits();
   const { addLog } = useLogs();
   const [notes, setNotes] = useState("");
   const [lastLogged, setLastLogged] = useState<Date | null>(null);
@@ -48,8 +48,8 @@ export function LogActivityView() {
     [addLog, notes]
   );
 
-  const handleAddCustom = useCallback((name: string) => {
-    addCustomHabit(name);
+  const handleAddCustom = useCallback((name: string, icon: string, color: string) => {
+    addCustomHabit(name, icon, color);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }, [addCustomHabit]);
 
@@ -60,7 +60,7 @@ export function LogActivityView() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <HabitGrid habits={habits} onLog={handleLog} />
+      <HabitGrid habits={habits} onLog={handleLog} onDelete={removeHabit} />
 
       <View style={styles.notesSection}>
         <Text style={[styles.notesLabel, { color: colors.foreground }]}>
