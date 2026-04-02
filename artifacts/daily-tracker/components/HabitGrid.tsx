@@ -7,7 +7,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -244,32 +243,6 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
                 </View>
               )}
 
-              {/* Notes input */}
-              <View>
-                <Text style={[styles.sheetSectionLabel, { color: colors.mutedForeground }]}>
-                  ADD NOTES (OPTIONAL)
-                </Text>
-                <TextInput
-                  value={popup.notes}
-                  onChangeText={(t) => setPopup((p) => (p ? { ...p, notes: t } : null))}
-                  placeholder="Any extra details for this entry..."
-                  placeholderTextColor={colors.mutedForeground}
-                  style={[
-                    styles.notesInput,
-                    {
-                      color: colors.foreground,
-                      borderColor: colors.border,
-                      backgroundColor: colors.background,
-                      fontFamily: "Inter_400Regular",
-                    },
-                  ]}
-                  multiline
-                  numberOfLines={2}
-                  returnKeyType="done"
-                  blurOnSubmit
-                />
-              </View>
-
               {/* Log button */}
               <Pressable
                 onPress={handleSubmitLog}
@@ -357,11 +330,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6,
   },
   subChipText: { fontSize: 12 },
-  notesInput: {
-    borderWidth: 1, borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 10,
-    fontSize: 14, minHeight: 60, textAlignVertical: "top",
-  },
   logBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, borderRadius: 14, paddingVertical: 14,
