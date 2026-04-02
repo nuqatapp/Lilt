@@ -10,13 +10,14 @@ interface BarChartViewProps {
   subtitle?: string;
 }
 
-export function BarChartView({ data, height = 120, title, subtitle }: BarChartViewProps) {
+export function BarChartView({ data, height = 160, title, subtitle }: BarChartViewProps) {
   const colors = useColors();
   const maxVal = Math.max(...data.map((d) => d.value), 1);
-  const barAreaH = height - 28;
-  const barW = 24;
-  const gap = 14;
-  const totalW = data.length * (barW + gap) - gap + 20;
+  const barAreaH = height - 32;
+  const barW = 36;
+  const gap = 20;
+  const leftPad = 12;
+  const totalW = data.length * (barW + gap) - gap + leftPad * 2;
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -24,21 +25,21 @@ export function BarChartView({ data, height = 120, title, subtitle }: BarChartVi
         <View style={styles.titleRow}>
           {title && (
             <Text style={[styles.title, { color: colors.foreground }]}>
-              {title}{subtitle ? " " : ""}
-              {subtitle && (
+              {title}
+              {subtitle ? (
                 <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-                  {subtitle}
+                  {" "}{subtitle}
                 </Text>
-              )}
+              ) : null}
             </Text>
           )}
         </View>
       )}
-      <Svg width={Math.max(totalW, 200)} height={height + 20} style={styles.svg}>
+      <Svg width={Math.max(totalW, 280)} height={height + 24} style={styles.svg}>
         {data.map((d, i) => {
-          const barH = Math.max(4, (d.value / maxVal) * barAreaH);
-          const x = 10 + i * (barW + gap);
-          const y = barAreaH - barH + 4;
+          const barH = Math.max(6, (d.value / maxVal) * barAreaH);
+          const x = leftPad + i * (barW + gap);
+          const y = barAreaH - barH + 6;
           const barColor = d.color ?? colors.primary;
           return (
             <React.Fragment key={d.label}>
@@ -47,27 +48,27 @@ export function BarChartView({ data, height = 120, title, subtitle }: BarChartVi
                 y={y}
                 width={barW}
                 height={barH}
-                rx={5}
-                fill={barColor + "aa"}
+                rx={8}
+                fill={barColor + "cc"}
               />
               <SvgText
                 x={x + barW / 2}
-                y={y - 4}
+                y={y - 6}
                 textAnchor="middle"
-                fontSize="11"
+                fontSize="13"
                 fill={colors.foreground}
-                fontWeight="600"
+                fontWeight="700"
               >
                 {d.value}
               </SvgText>
               <SvgText
                 x={x + barW / 2}
-                y={barAreaH + 18}
+                y={barAreaH + 22}
                 textAnchor="middle"
-                fontSize="10"
+                fontSize="11"
                 fill={colors.mutedForeground}
               >
-                {d.label.length > 7 ? d.label.slice(0, 7) : d.label}
+                {d.label.length > 8 ? d.label.slice(0, 8) : d.label}
               </SvgText>
             </React.Fragment>
           );
@@ -79,20 +80,20 @@ export function BarChartView({ data, height = 120, title, subtitle }: BarChartVi
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 12,
+    padding: 18,
     overflow: "hidden",
   },
   titleRow: {
-    marginBottom: 6,
+    marginBottom: 10,
   },
   title: {
-    fontSize: 13,
+    fontSize: 16,
     fontFamily: "Inter_600SemiBold",
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Inter_400Regular",
   },
   svg: {

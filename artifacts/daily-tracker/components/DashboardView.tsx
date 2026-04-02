@@ -252,40 +252,32 @@ export function DashboardView() {
         </View>
       </View>
 
-      {/* Charts */}
-      {(settings.showFrequencyChart || settings.showInsightsChart) && (
-        <View style={styles.chartsRow}>
-          {settings.showFrequencyChart && (
-            <View style={{ flex: 1 }}>
-              {visibleHabitCounts.length > 0 ? (
-                <BarChartView
-                  data={visibleHabitCounts.map((h) => ({
-                    label: h.name,
-                    value: h.count,
-                    color: getHabitColor(h.id, habits),
-                  }))}
-                  title="Frequency Overview"
-                  subtitle="(Top Habits)"
-                />
-              ) : (
-                <EmptyChart title="Frequency Overview" message="No logs yet" colors={colors} />
-              )}
-            </View>
-          )}
-          {settings.showInsightsChart && (
-            <View style={{ flex: 1 }}>
-              {weekTrend.series.length > 0 ? (
-                <LineChartView
-                  series={weekTrend.series}
-                  xLabels={weekTrend.labels}
-                  title="Specific Insights"
-                />
-              ) : (
-                <EmptyChart title="Specific Insights" message="Log more habits" colors={colors} />
-              )}
-            </View>
-          )}
-        </View>
+      {/* Charts — stacked full-width */}
+      {settings.showFrequencyChart && (
+        visibleHabitCounts.length > 0 ? (
+          <BarChartView
+            data={visibleHabitCounts.map((h) => ({
+              label: h.name,
+              value: h.count,
+              color: getHabitColor(h.id, habits),
+            }))}
+            title="Frequency Overview"
+            subtitle="(Top Habits)"
+          />
+        ) : (
+          <EmptyChart title="Frequency Overview" message="No logs yet" colors={colors} />
+        )
+      )}
+      {settings.showInsightsChart && (
+        weekTrend.series.length > 0 ? (
+          <LineChartView
+            series={weekTrend.series}
+            xLabels={weekTrend.labels}
+            title="Specific Insights"
+          />
+        ) : (
+          <EmptyChart title="Specific Insights" message="Log more habits" colors={colors} />
+        )
       )}
 
       {/* Detailed Logs */}
@@ -599,22 +591,22 @@ function EmptyChart({ title, message, colors }: { title: string; message: string
 
 const styles = StyleSheet.create({
   content: {
-    gap: 10,
-    paddingTop: 10,
-    paddingHorizontal: 12,
+    gap: 14,
+    paddingTop: 14,
+    paddingHorizontal: 14,
   },
   timeBar: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     gap: 8,
     flexWrap: "wrap",
   },
   timeLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Inter_500Medium",
     flex: 1,
   },
@@ -623,23 +615,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   rangePill: {
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
   },
   rangePillText: {
-    fontSize: 12,
-  },
-  chartsRow: {
-    flexDirection: "row",
-    gap: 8,
+    fontSize: 13,
   },
   card: {
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 14,
-    gap: 10,
+    padding: 18,
+    gap: 14,
   },
   cardHeader: {
     flexDirection: "row",
@@ -647,11 +635,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: "Inter_600SemiBold",
   },
   cardMeta: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
   },
   emptyState: {
@@ -660,59 +648,61 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   emptyText: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
   },
   moreLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
     paddingTop: 4,
   },
   emptyChart: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 12,
-    gap: 6,
-    minHeight: 80,
+    padding: 18,
+    gap: 8,
+    minHeight: 90,
+    alignItems: "center",
+    justifyContent: "center",
   },
   logRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 8,
-    paddingVertical: 8,
+    gap: 12,
+    paddingVertical: 12,
   },
   logTimestamp: {
-    width: 54,
-    gap: 1,
+    width: 62,
+    gap: 2,
   },
   logDate: {
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: "Inter_400Regular",
   },
   logTime: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: "Inter_500Medium",
   },
   logIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 1,
   },
   logContent: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   logName: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: "Inter_600SemiBold",
   },
   logSub: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
   },
   settingsHeader: {
@@ -726,10 +716,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   settingsBody: {
-    gap: 14,
+    gap: 16,
   },
   settingsSection: {
-    gap: 2,
+    gap: 4,
   },
   chipRow: {
     flexDirection: "row",
@@ -737,13 +727,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
   },
   chipText: {
-    fontSize: 12,
+    fontSize: 13,
   },
   divider: {
     height: 1,

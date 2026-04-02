@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Svg, { Circle, Line, Path, Text as SvgText } from "react-native-svg";
+import Svg, { Circle, Path, Text as SvgText } from "react-native-svg";
 import { useColors } from "@/hooks/useColors";
 
 interface DataSeries {
@@ -16,14 +16,14 @@ interface LineChartViewProps {
   title?: string;
 }
 
-export function LineChartView({ series, xLabels, height = 110, title }: LineChartViewProps) {
+export function LineChartView({ series, xLabels, height = 150, title }: LineChartViewProps) {
   const colors = useColors();
-  const svgW = 200;
+  const svgW = 320;
   const svgH = height;
-  const padL = 4;
-  const padR = 4;
-  const padT = 10;
-  const padB = 20;
+  const padL = 8;
+  const padR = 8;
+  const padT = 14;
+  const padB = 26;
   const plotW = svgW - padL - padR;
   const plotH = svgH - padT - padB;
   const n = xLabels.length;
@@ -36,7 +36,9 @@ export function LineChartView({ series, xLabels, height = 110, title }: LineChar
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      {title && <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>}
+      {title && (
+        <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
+      )}
       <View style={styles.legendRow}>
         {series.map((s) => (
           <View key={s.label} style={styles.legendItem}>
@@ -51,9 +53,18 @@ export function LineChartView({ series, xLabels, height = 110, title }: LineChar
           const d = pts.length > 1 ? `M ${pts.join(" L ")}` : "";
           return (
             <React.Fragment key={s.label}>
-              {d ? <Path d={d} stroke={s.color} strokeWidth={1.8} fill="none" strokeLinecap="round" strokeLinejoin="round" /> : null}
+              {d ? (
+                <Path
+                  d={d}
+                  stroke={s.color}
+                  strokeWidth={2.5}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ) : null}
               {s.data.map((v, i) => (
-                <Circle key={i} cx={xPos(i)} cy={yPos(v)} r={2.5} fill={s.color} />
+                <Circle key={i} cx={xPos(i)} cy={yPos(v)} r={4} fill={s.color} />
               ))}
             </React.Fragment>
           );
@@ -62,55 +73,55 @@ export function LineChartView({ series, xLabels, height = 110, title }: LineChar
           <SvgText
             key={lbl}
             x={xPos(i)}
-            y={svgH - 4}
+            y={svgH - 6}
             textAnchor="middle"
-            fontSize="9"
+            fontSize="11"
             fill={colors.mutedForeground}
           >
             {lbl}
           </SvgText>
         ))}
       </Svg>
-      <Text style={[styles.xAxisLabel, { color: colors.mutedForeground }]}>Week</Text>
+      <Text style={[styles.xAxisLabel, { color: colors.mutedForeground }]}>This week</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 12,
+    padding: 18,
   },
   title: {
-    fontSize: 13,
+    fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    marginBottom: 4,
+    marginBottom: 8,
   },
   legendRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 4,
+    gap: 14,
+    marginBottom: 6,
     flexWrap: "wrap",
   },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   legendLabel: {
-    fontSize: 10,
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
   },
   xAxisLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
-    marginTop: 2,
+    marginTop: 4,
   },
 });
