@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "dlsps9_skwRO4xt2IWV89"
+uri = "file://artifacts/daily-tracker/assets/images/icon.png"
+type = "image"
+title = "generated_image"

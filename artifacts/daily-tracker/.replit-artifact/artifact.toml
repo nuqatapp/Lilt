@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "Daily Tracker"
+version = "1.0.0"
+id = "artifacts/daily-tracker"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 22913
+
+[services.development]
+run = "pnpm --filter @workspace/daily-tracker run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/daily-tracker", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/daily-tracker", "run", "serve" ]
+
+[services.env]
+PORT = "22913"
+BASE_PATH = "/"
