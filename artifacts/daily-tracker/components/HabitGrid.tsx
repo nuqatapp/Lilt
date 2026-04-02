@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -38,6 +39,7 @@ interface HabitGridProps {
 interface PopupState {
   habit: Habit;
   selectedSub: SubHabit | null;
+  notes: string;
 }
 
 const DOUBLE_TAP_MS = 300;
@@ -75,7 +77,7 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
       if (habit.isCustom && habit.subHabits.length === 0) {
         setDeletePopup(habit);
       } else {
-        setPopup({ habit, selectedSub: null });
+        setPopup({ habit, selectedSub: null, notes: "" });
       }
     },
     []
@@ -84,7 +86,7 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
   const handleSubmitLog = useCallback(() => {
     if (!popup) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onLog(popup.habit, popup.selectedSub ?? undefined);
+    onLog(popup.habit, popup.selectedSub ?? undefined, popup.notes.trim() || undefined);
     setPopup(null);
   }, [popup, onLog]);
 
@@ -303,6 +305,25 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
                 </View>
               )}
 
+              {/* Notes input */}
+              <TextInput
+                value={popup.notes}
+                onChangeText={(t) => setPopup((p) => (p ? { ...p, notes: t } : null))}
+                placeholder="Add a note (optional)..."
+                placeholderTextColor={colors.mutedForeground}
+                style={[
+                  styles.notesInput,
+                  {
+                    color: colors.foreground,
+                    borderColor: colors.border,
+                    backgroundColor: colors.background,
+                    fontFamily: "Inter_400Regular",
+                  },
+                ]}
+                returnKeyType="done"
+                blurOnSubmit
+              />
+
               {/* Log button */}
               <Pressable
                 onPress={handleSubmitLog}
@@ -399,6 +420,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6,
   },
   subChipText: { fontSize: 12 },
+  notesInput: {
+    borderWidth: 1, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10,
+    fontSize: 14,
+  },
   logBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, borderRadius: 14, paddingVertical: 14,
