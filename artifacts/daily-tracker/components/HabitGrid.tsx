@@ -29,16 +29,28 @@ interface PopupState {
   mode: "subHabits" | "delete";
 }
 
+const DOUBLE_TAP_MS = 300;
+
 export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
   const colors = useColors();
   const [popup, setPopup] = useState<PopupState | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
   const cellRefs = useRef<Record<string, View | null>>({});
+  const lastTap = useRef<Record<string, number>>({});
 
   const handlePress = useCallback(
     (habit: Habit) => {
-      if (habit.subHabits.length === 0) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const now = Date.now();
+      const last = lastTap.current[habit.id] ?? 0;
+      if (now - last < DOUBLE_TAP_MS) {
+        lastTap.current[habit.id] = 0;
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onLog(habit);
+      } else {
+        lastTap.current[habit.id] = now;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setFlash(habit.id);
+        setTimeout(() => setFlash((f) => (f === habit.id ? null : f)), 250);
       }
     },
     [onLog]
@@ -47,6 +59,7 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
   const handleLongPress = useCallback(
     (habit: Habit) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      lastTap.current[habit.id] = 0;
       const ref = cellRefs.current[habit.id];
       if (!ref) return;
       ref.measure((_fx, _fy, _w, _h, px, py) => {
@@ -94,8 +107,12 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
             style={({ pressed }) => [
               styles.cell,
               {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
+                backgroundColor:
+                  flash === habit.id
+                    ? habit.color + "18"
+                    : colors.card,
+                borderColor:
+                  flash === habit.id ? habit.color : colors.border,
                 opacity: pressed ? 0.85 : 1,
               },
             ]}
@@ -110,9 +127,13 @@ export function HabitGrid({ habits, onLog, onDelete }: HabitGridProps) {
             <Text style={[styles.cellLabel, { color: colors.foreground }]} numberOfLines={1}>
               {habit.name}
             </Text>
-            {habit.subHabits.length > 0 && (
+            {habit.subHabits.length > 0 ? (
               <Text style={[styles.longPressHint, { color: colors.mutedForeground }]}>
                 long-press
+              </Text>
+            ) : (
+              <Text style={[styles.longPressHint, { color: colors.mutedForeground }]}>
+                double-tap
               </Text>
             )}
             {habit.isCustom && habit.subHabits.length === 0 && (
