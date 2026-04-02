@@ -50,9 +50,15 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
   const [deletePopup, setDeletePopup] = useState<Habit | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const lastTap = useRef<Record<string, number>>({});
+  const isLongPressing = useRef(false);
 
   const handlePress = useCallback(
     (habit: Habit) => {
+      // Block the trailing onPress that Android fires after a long-press
+      if (isLongPressing.current) {
+        isLongPressing.current = false;
+        return;
+      }
       if (habit.subHabits.length > 0) return;
       const now = Date.now();
       const last = lastTap.current[habit.id] ?? 0;
@@ -72,6 +78,7 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
 
   const handleLongPress = useCallback(
     (habit: Habit) => {
+      isLongPressing.current = true;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       lastTap.current[habit.id] = 0;
       if (habit.isCustom && habit.subHabits.length === 0) {
@@ -311,6 +318,9 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
                 onChangeText={(t) => setPopup((p) => (p ? { ...p, notes: t } : null))}
                 placeholder="Add a note (optional)..."
                 placeholderTextColor={colors.mutedForeground}
+                maxLength={200}
+                multiline
+                numberOfLines={2}
                 style={[
                   styles.notesInput,
                   {
@@ -416,10 +426,11 @@ const styles = StyleSheet.create({
   subRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   subChip: {
     flexDirection: "row", alignItems: "center", gap: 5,
-    borderRadius: 20, borderWidth: 1.5,
-    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 22, borderWidth: 1.5,
+    paddingHorizontal: 12, paddingVertical: 12,
+    minWidth: 44, minHeight: 44,
   },
-  subChipText: { fontSize: 12 },
+  subChipText: { fontSize: 13 },
   notesInput: {
     borderWidth: 1, borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 10,

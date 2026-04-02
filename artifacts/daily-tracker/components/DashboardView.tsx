@@ -68,7 +68,8 @@ function getRangeLabel(range: TimeRange): string {
   if (range === "day") return `Today, ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   if (range === "week") {
     const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay());
+    const day = now.getDay();
+    start.setDate(now.getDate() - (day === 0 ? 6 : day - 1)); // Monday-start
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
     const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -84,7 +85,8 @@ function getDateRange(range: TimeRange): { start: string; end: string } {
   if (range === "day") return { start: today, end: today };
   if (range === "week") {
     const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay());
+    const day = now.getDay();
+    start.setDate(now.getDate() - (day === 0 ? 6 : day - 1)); // Monday-start
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
     return { start: start.toISOString().split("T")[0], end: end.toISOString().split("T")[0] };

@@ -1,0 +1,44 @@
+🛠 Fix 1 & 4: The Timezone & Sorting Logic (Critical)The current lexicographical comparison fails because it mixes formats. We need to normalize everything to start-of-day and end-of-day timestamps.In LogContext.tsx:TypeScript// Replace the filter logic in getLogsForRange
+export const getLogsForRange = (logs, startDate, endDate) => {
+  const start = new Date(startDate).setHours(0, 0, 0, 0);
+  const end = new Date(endDate).setHours(23, 59, 59, 999);
+
+  return logs
+    .filter((log) => {
+      const logTime = new Date(log.timestamp).getTime();
+      return logTime >= start && logTime <= end;
+    })
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Fixed Issue #4 (Sorting)
+};
+🛠 Fix 2: The Android Long-Press Race Condition (Critical)To prevent the "trailing press" on Android, we need a ref to "lock" the interaction once a long press is successful.In HabitGrid.tsx:TypeScriptconst isLongPressing = useRef(false);
+
+const handlePress = (habit) => {
+  if (isLongPressing.current) {
+    isLongPressing.current = false;
+    return; // Block the trailing onPress
+  }
+  // ... existing single tap logic
+};
+
+const handleLongPress = (habit) => {
+  isLongPressing.current = true;
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  setSelectedHabit(habit);
+  setShowSubMenu(true);
+};
+🛠 Fix 3: Storage Scaling & Pruning (Critical)Storing 18,000 logs in a single JSON string will eventually crash the app. We should implement a basic pruning mechanism or at least a "Limit" to ensure performance.In LogContext.tsx:TypeScriptconst MAX_LOGS = 5000; // Keep the last 5,000 entries (approx. 3-6 months of data)
+
+const saveLogs = async (newLogs) => {
+  try {
+    // Prune the array if it exceeds the limit
+    const prunedLogs = newLogs.length > MAX_LOGS 
+      ? newLogs.slice(0, MAX_LOGS) 
+      : newLogs;
+      
+    const jsonValue = JSON.stringify(prunedLogs);
+    await AsyncStorage.setItem('@logs', jsonValue);
+  } catch (e) {
+    console.error("Storage error:", e);
+  }
+};
+🛠 Fix 5, 6, & 7: UI & Localization (High-Priority)IssueCode Fix / Strategy#5 Week RangeUse start.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1)) for Monday-start, or use the date-fns library's startOfWeek(date, { weekStartsOn: 1 }).#6 Max LengthAdd maxLength={200} to your TextInput and multiline={true} to prevent layout breakage.#7 Tap TargetsUpdate sub-habit chip styles: paddingVertical: 12 and minWidth: 44 to ensure they meet the 44pt HIG requirement.

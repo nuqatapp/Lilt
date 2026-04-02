@@ -471,7 +471,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const addCustomHabit = useCallback(
     (name: string, icon: string, color: string) => {
       const newH: Habit = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
         name,
         icon,
         iconSet: "MaterialCommunityIcons",

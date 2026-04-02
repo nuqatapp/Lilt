@@ -27,6 +27,7 @@ interface LogContextValue {
 
 const LogContext = createContext<LogContextValue | null>(null);
 const LOGS_KEY = "@trace_logs_v1";
+const MAX_LOGS = 5000;
 
 export function LogProvider({ children }: { children: React.ReactNode }) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -38,15 +39,20 @@ export function LogProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const saveLogs = useCallback(async (updated: LogEntry[]) => {
-    setLogs(updated);
-    await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(updated));
+    const pruned = updated.length > MAX_LOGS ? updated.slice(0, MAX_LOGS) : updated;
+    setLogs(pruned);
+    try {
+      await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(pruned));
+    } catch (e) {
+      console.error("Storage error:", e);
+    }
   }, []);
 
   const addLog = useCallback(
     (entry: Omit<LogEntry, "id" | "timestamp">) => {
       const newEntry: LogEntry = {
         ...entry,
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         timestamp: new Date().toISOString(),
       };
       saveLogs([newEntry, ...logs]);
@@ -63,19 +69,29 @@ export function LogProvider({ children }: { children: React.ReactNode }) {
   );
 
   const getLogsForRange = useCallback(
-    (start: string, end: string) =>
-      logs.filter((l) => l.timestamp >= start && l.timestamp <= end + "T23:59:59"),
+    (start: string, end: string) => {
+      const startMs = new Date(start).setHours(0, 0, 0, 0);
+      const endMs = new Date(end).setHours(23, 59, 59, 999);
+      return logs
+        .filter((l) => {
+          const t = new Date(l.timestamp).getTime();
+          return t >= startMs && t <= endMs;
+        })
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    },
     [logs]
   );
 
   const getHabitCount = useCallback(
-    (habitId: string, startDate: string, endDate: string) =>
-      logs.filter(
-        (l) =>
-          l.habitId === habitId &&
-          l.timestamp >= startDate &&
-          l.timestamp <= endDate + "T23:59:59"
-      ).length,
+    (habitId: string, startDate: string, endDate: string) => {
+      const startMs = new Date(startDate).setHours(0, 0, 0, 0);
+      const endMs = new Date(endDate).setHours(23, 59, 59, 999);
+      return logs.filter((l) => {
+        if (l.habitId !== habitId) return false;
+        const t = new Date(l.timestamp).getTime();
+        return t >= startMs && t <= endMs;
+      }).length;
+    },
     [logs]
   );
 
