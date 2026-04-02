@@ -1,37 +1,81 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from "react-native";
 import { useLogs, type LogEntry } from "@/context/LogContext";
+import { useHabits } from "@/context/HabitsContext";
 import { useColors } from "@/hooks/useColors";
 import { BarChartView } from "@/components/BarChartView";
 import { LineChartView } from "@/components/LineChartView";
 
 type TimeRange = "day" | "week" | "month" | "custom";
+type LogCount = 5 | 10 | 20 | 50;
+
+interface DashboardSettings {
+  defaultTimeRange: TimeRange;
+  showFrequencyChart: boolean;
+  showInsightsChart: boolean;
+  showDetailedLogs: boolean;
+  logCount: LogCount;
+  hiddenHabitIds: string[];
+}
+
+const DEFAULT_SETTINGS: DashboardSettings = {
+  defaultTimeRange: "week",
+  showFrequencyChart: true,
+  showInsightsChart: true,
+  showDetailedLogs: true,
+  logCount: 10,
+  hiddenHabitIds: [],
+};
+
+const SETTINGS_KEY = "@trace_dashboard_settings_v1";
+
+function useDashboardSettings() {
+  const [settings, setSettings] = useState<DashboardSettings>(DEFAULT_SETTINGS);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SETTINGS_KEY)
+      .then((v) => {
+        if (v) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(v) });
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, []);
+
+  const update = useCallback((patch: Partial<DashboardSettings>) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  return { settings, update, loaded };
+}
 
 function getRangeLabel(range: TimeRange): string {
   const now = new Date();
-  if (range === "day") {
-    return `Today, ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-  }
+  if (range === "day") return `Today, ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   if (range === "week") {
     const start = new Date(now);
     start.setDate(now.getDate() - now.getDay());
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
-    const fmt = (d: Date) =>
-      d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    return `Week: ${fmt(start)}-${end.getDate()}`;
+    const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return `Week: ${fmt(start)} – ${end.getDate()}`;
   }
-  if (range === "month") {
-    return now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  }
-  return "Custom";
+  if (range === "month") return now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return "Last 30 days";
 }
 
 function getDateRange(range: TimeRange): { start: string; end: string } {
@@ -43,18 +87,12 @@ function getDateRange(range: TimeRange): { start: string; end: string } {
     start.setDate(now.getDate() - now.getDay());
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
-    return {
-      start: start.toISOString().split("T")[0],
-      end: end.toISOString().split("T")[0],
-    };
+    return { start: start.toISOString().split("T")[0], end: end.toISOString().split("T")[0] };
   }
   if (range === "month") {
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return {
-      start: start.toISOString().split("T")[0],
-      end: end.toISOString().split("T")[0],
-    };
+    return { start: start.toISOString().split("T")[0], end: end.toISOString().split("T")[0] };
   }
   const start = new Date(now);
   start.setDate(now.getDate() - 30);
@@ -70,6 +108,11 @@ function formatTime(iso: string): string {
   return `${h}:${m} ${ampm}`;
 }
 
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 const HABIT_COLORS: Record<string, string> = {
   shower: "#7ab8c4",
   exercise: "#8aaa70",
@@ -81,17 +124,28 @@ const HABIT_COLORS: Record<string, string> = {
   reading: "#c09060",
   work: "#7090a8",
   stretching: "#b09880",
-  free_text: "#b0a090",
 };
 
-function getHabitColor(habitId: string): string {
+function getHabitColor(habitId: string, habits: { id: string; color: string }[]): string {
+  const h = habits.find((x) => x.id === habitId);
+  if (h) return h.color;
   return HABIT_COLORS[habitId] ?? "#a0a0a0";
 }
+
+const RANGES: TimeRange[] = ["day", "week", "month", "custom"];
+const LOG_COUNTS: LogCount[] = [5, 10, 20, 50];
 
 export function DashboardView() {
   const colors = useColors();
   const { logs, getLogsForRange } = useLogs();
-  const [timeRange, setTimeRange] = useState<TimeRange>("week");
+  const { habits } = useHabits();
+  const { settings, update, loaded } = useDashboardSettings();
+  const [timeRange, setTimeRange] = useState<TimeRange>(settings.defaultTimeRange);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    if (loaded) setTimeRange(settings.defaultTimeRange);
+  }, [loaded]);
 
   const { start, end } = useMemo(() => getDateRange(timeRange), [timeRange]);
   const rangeLogs = useMemo(() => getLogsForRange(start, end), [getLogsForRange, start, end]);
@@ -108,54 +162,79 @@ export function DashboardView() {
       .slice(0, 5);
   }, [rangeLogs]);
 
+  const visibleHabitCounts = useMemo(
+    () => habitCounts.filter((h) => !settings.hiddenHabitIds.includes(h.id)),
+    [habitCounts, settings.hiddenHabitIds]
+  );
+
   const weekTrend = useMemo(() => {
     const days = ["S", "M", "T", "W", "T", "F", "S"];
-    const topTwo = habitCounts.slice(0, 2);
+    const topTwo = visibleHabitCounts.slice(0, 2);
     const series = topTwo.map((h) => {
       const weekData = Array.from({ length: 7 }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - d.getDay() + i);
         const dateStr = d.toISOString().split("T")[0];
-        return logs.filter(
-          (l) => l.habitId === h.id && l.timestamp.startsWith(dateStr)
-        ).length;
+        return logs.filter((l) => l.habitId === h.id && l.timestamp.startsWith(dateStr)).length;
       });
       return {
         label: h.name,
-        color: getHabitColor(h.id),
+        color: getHabitColor(h.id, habits),
         data: weekData,
       };
     });
     return { series, labels: days };
-  }, [habitCounts, logs]);
+  }, [visibleHabitCounts, logs, habits]);
 
   const recentLogs = useMemo(
-    () => rangeLogs.slice(0, 10),
-    [rangeLogs]
+    () => rangeLogs.slice(0, settings.logCount),
+    [rangeLogs, settings.logCount]
   );
 
-  const RANGES: TimeRange[] = ["day", "week", "month", "custom"];
+  const toggleHiddenHabit = useCallback(
+    (id: string) => {
+      const hidden = settings.hiddenHabitIds;
+      if (hidden.includes(id)) {
+        update({ hiddenHabitIds: hidden.filter((x) => x !== id) });
+      } else {
+        update({ hiddenHabitIds: [...hidden, id] });
+      }
+    },
+    [settings.hiddenHabitIds, update]
+  );
+
+  const allTrackedHabits = useMemo(() => {
+    const inLogs = Array.from(new Set(logs.map((l) => l.habitId))).map((id) => {
+      const log = logs.find((l) => l.habitId === id)!;
+      const habit = habits.find((h) => h.id === id);
+      return { id, name: log.habitName, color: habit?.color ?? getHabitColor(id, habits), icon: habit?.icon ?? "check" };
+    });
+    return inLogs;
+  }, [logs, habits]);
 
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
+      contentContainerStyle={[styles.content, { paddingBottom: 32 }]}
       showsVerticalScrollIndicator={false}
     >
+      {/* Time range bar */}
       <View style={[styles.timeBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.timeLabel, { color: colors.foreground }]}>Time:</Text>
-        <View style={[styles.timeDropdown, { borderColor: colors.border }]}>
-          <Text style={[styles.timeDropdownText, { color: colors.foreground }]}>
-            {getRangeLabel(timeRange)}
-          </Text>
-          <MaterialCommunityIcons name="chevron-down" size={14} color={colors.mutedForeground} />
-        </View>
+        <Text style={[styles.timeLabel, { color: colors.foreground }]}>
+          {getRangeLabel(timeRange)}
+        </Text>
         <View style={styles.rangePills}>
           {RANGES.map((r) => (
             <Pressable
               key={r}
               onPress={() => setTimeRange(r)}
-              style={styles.rangePill}
+              style={[
+                styles.rangePill,
+                {
+                  backgroundColor: timeRange === r ? colors.primary + "18" : "transparent",
+                  borderColor: timeRange === r ? colors.primary : colors.border,
+                },
+              ]}
             >
               <Text
                 style={[
@@ -163,110 +242,347 @@ export function DashboardView() {
                   {
                     color: timeRange === r ? colors.primary : colors.mutedForeground,
                     fontFamily: timeRange === r ? "Inter_600SemiBold" : "Inter_400Regular",
-                    textDecorationLine: timeRange === r ? "underline" : "none",
                   },
                 ]}
               >
-                {r.charAt(0).toUpperCase() + r.slice(1)}
+                {r === "custom" ? "30d" : r.charAt(0).toUpperCase() + r.slice(1)}
               </Text>
             </Pressable>
           ))}
         </View>
       </View>
 
-      <View style={styles.chartsRow}>
-        <View style={{ flex: 1 }}>
-          {habitCounts.length > 0 ? (
-            <BarChartView
-              data={habitCounts.map((h) => ({
-                label: h.name,
-                value: h.count,
-                color: getHabitColor(h.id),
-              }))}
-              title="Frequency Overview"
-              subtitle="(Top Habits)"
-            />
-          ) : (
-            <EmptyChart title="Frequency Overview" message="No logs yet" colors={colors} />
+      {/* Charts */}
+      {(settings.showFrequencyChart || settings.showInsightsChart) && (
+        <View style={styles.chartsRow}>
+          {settings.showFrequencyChart && (
+            <View style={{ flex: 1 }}>
+              {visibleHabitCounts.length > 0 ? (
+                <BarChartView
+                  data={visibleHabitCounts.map((h) => ({
+                    label: h.name,
+                    value: h.count,
+                    color: getHabitColor(h.id, habits),
+                  }))}
+                  title="Frequency Overview"
+                  subtitle="(Top Habits)"
+                />
+              ) : (
+                <EmptyChart title="Frequency Overview" message="No logs yet" colors={colors} />
+              )}
+            </View>
+          )}
+          {settings.showInsightsChart && (
+            <View style={{ flex: 1 }}>
+              {weekTrend.series.length > 0 ? (
+                <LineChartView
+                  series={weekTrend.series}
+                  xLabels={weekTrend.labels}
+                  title="Specific Insights"
+                />
+              ) : (
+                <EmptyChart title="Specific Insights" message="Log more habits" colors={colors} />
+              )}
+            </View>
           )}
         </View>
-        <View style={{ flex: 1 }}>
-          {weekTrend.series.length > 0 ? (
-            <LineChartView
-              series={weekTrend.series}
-              xLabels={weekTrend.labels}
-              title="Specific Insights"
-            />
-          ) : (
-            <EmptyChart title="Specific Insights" message="Log more habits" colors={colors} />
-          )}
-        </View>
-      </View>
+      )}
 
-      <View style={styles.bottomRow}>
-        <View style={[styles.logsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.foreground }]}>Detailed Logs</Text>
-          {recentLogs.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              No logs in this period
+      {/* Detailed Logs */}
+      {settings.showDetailedLogs && (
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.cardHeader}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Detailed Logs</Text>
+            <Text style={[styles.cardMeta, { color: colors.mutedForeground }]}>
+              {rangeLogs.length} entries
             </Text>
+          </View>
+          {recentLogs.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="clipboard-text-outline" size={28} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                No logs in this period
+              </Text>
+            </View>
           ) : (
-            recentLogs.map((entry) => (
-              <LogRow key={entry.id} entry={entry} colors={colors} />
+            recentLogs.map((entry, i) => (
+              <LogRow
+                key={entry.id}
+                entry={entry}
+                colors={colors}
+                habits={habits}
+                showDate={timeRange !== "day"}
+                isLast={i === recentLogs.length - 1}
+              />
             ))
           )}
-        </View>
-
-        <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.settingsHeader}>
-            <Text style={[styles.cardTitle, { color: colors.foreground }]}>
-              Dashboard Settings
+          {rangeLogs.length > settings.logCount && (
+            <Text style={[styles.moreLabel, { color: colors.mutedForeground }]}>
+              +{rangeLogs.length - settings.logCount} more — increase log count in settings
             </Text>
-            <MaterialCommunityIcons name="cog-outline" size={18} color={colors.mutedForeground} />
-          </View>
-          <Text style={[styles.settingsDesc, { color: colors.mutedForeground }]}>
-            Customize which high-level habits appear as graphs.
-          </Text>
-          <View style={styles.settingsHabits}>
-            {habitCounts.slice(0, 3).map((h) => (
-              <View key={h.id} style={[styles.settingsChip, { backgroundColor: getHabitColor(h.id) + "22", borderColor: getHabitColor(h.id) + "55" }]}>
-                <Text style={[styles.settingsChipText, { color: getHabitColor(h.id) }]}>{h.name}</Text>
-              </View>
-            ))}
-          </View>
+          )}
         </View>
-      </View>
+      )}
 
-      <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-        * Tap to log instantly. Long-press for details. Free text captured with date and time.
-      </Text>
+      {/* Dashboard Settings */}
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Pressable
+          style={styles.settingsHeader}
+          onPress={() => setSettingsOpen((o) => !o)}
+        >
+          <View style={styles.settingsTitleRow}>
+            <MaterialCommunityIcons name="cog-outline" size={18} color={colors.primary} />
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Dashboard Settings</Text>
+          </View>
+          <MaterialCommunityIcons
+            name={settingsOpen ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={colors.mutedForeground}
+          />
+        </Pressable>
+
+        {settingsOpen && (
+          <View style={styles.settingsBody}>
+
+            {/* Default time range */}
+            <SettingsSection label="Default Time Range">
+              <View style={styles.chipRow}>
+                {RANGES.map((r) => (
+                  <Pressable
+                    key={r}
+                    onPress={() => update({ defaultTimeRange: r })}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor:
+                          settings.defaultTimeRange === r
+                            ? colors.primary + "20"
+                            : colors.background,
+                        borderColor:
+                          settings.defaultTimeRange === r
+                            ? colors.primary
+                            : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        {
+                          color:
+                            settings.defaultTimeRange === r
+                              ? colors.primary
+                              : colors.mutedForeground,
+                          fontFamily:
+                            settings.defaultTimeRange === r
+                              ? "Inter_600SemiBold"
+                              : "Inter_400Regular",
+                        },
+                      ]}
+                    >
+                      {r === "custom" ? "30 days" : r.charAt(0).toUpperCase() + r.slice(1)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </SettingsSection>
+
+            <Divider colors={colors} />
+
+            {/* Visible sections */}
+            <SettingsSection label="Visible Sections">
+              <ToggleRow
+                label="Frequency Overview chart"
+                icon="chart-bar"
+                value={settings.showFrequencyChart}
+                onToggle={() => update({ showFrequencyChart: !settings.showFrequencyChart })}
+                colors={colors}
+              />
+              <ToggleRow
+                label="Specific Insights chart"
+                icon="chart-line"
+                value={settings.showInsightsChart}
+                onToggle={() => update({ showInsightsChart: !settings.showInsightsChart })}
+                colors={colors}
+              />
+              <ToggleRow
+                label="Detailed Logs list"
+                icon="format-list-bulleted"
+                value={settings.showDetailedLogs}
+                onToggle={() => update({ showDetailedLogs: !settings.showDetailedLogs })}
+                colors={colors}
+              />
+            </SettingsSection>
+
+            <Divider colors={colors} />
+
+            {/* Log count */}
+            <SettingsSection label="Log History Count">
+              <View style={styles.chipRow}>
+                {LOG_COUNTS.map((c) => (
+                  <Pressable
+                    key={c}
+                    onPress={() => update({ logCount: c })}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor:
+                          settings.logCount === c
+                            ? colors.primary + "20"
+                            : colors.background,
+                        borderColor:
+                          settings.logCount === c
+                            ? colors.primary
+                            : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        {
+                          color:
+                            settings.logCount === c
+                              ? colors.primary
+                              : colors.mutedForeground,
+                          fontFamily:
+                            settings.logCount === c
+                              ? "Inter_600SemiBold"
+                              : "Inter_400Regular",
+                        },
+                      ]}
+                    >
+                      {c}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </SettingsSection>
+
+            {allTrackedHabits.length > 0 && (
+              <>
+                <Divider colors={colors} />
+                <SettingsSection label="Habits shown in charts">
+                  {allTrackedHabits.map((h) => {
+                    const hidden = settings.hiddenHabitIds.includes(h.id);
+                    return (
+                      <ToggleRow
+                        key={h.id}
+                        label={h.name}
+                        icon={h.icon as any}
+                        iconColor={h.color}
+                        value={!hidden}
+                        onToggle={() => toggleHiddenHabit(h.id)}
+                        colors={colors}
+                      />
+                    );
+                  })}
+                </SettingsSection>
+              </>
+            )}
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
 
-function LogRow({ entry, colors }: { entry: LogEntry; colors: any }) {
+function SettingsSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <View style={styles.logRow}>
-      <Text style={[styles.logTime, { color: colors.mutedForeground }]}>
-        {formatTime(entry.timestamp)}
+    <View style={styles.settingsSection}>
+      <Text style={{ fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.8, color: "#a09080", marginBottom: 8 }}>
+        {label}
       </Text>
-      <View style={[styles.logIconWrap, { backgroundColor: getHabitColor(entry.habitId) + "22" }]}>
+      <View style={{ gap: 6 }}>{children}</View>
+    </View>
+  );
+}
+
+function Divider({ colors }: { colors: any }) {
+  return <View style={[styles.divider, { backgroundColor: colors.border }]} />;
+}
+
+function ToggleRow({
+  label,
+  icon,
+  iconColor,
+  value,
+  onToggle,
+  colors,
+}: {
+  label: string;
+  icon: string;
+  iconColor?: string;
+  value: boolean;
+  onToggle: () => void;
+  colors: any;
+}) {
+  return (
+    <Pressable onPress={onToggle} style={styles.toggleRow}>
+      <View style={[styles.toggleIcon, { backgroundColor: (iconColor ?? colors.primary) + "20" }]}>
         <MaterialCommunityIcons
-          name="check-circle-outline"
-          size={16}
-          color={getHabitColor(entry.habitId)}
+          name={icon as any}
+          size={15}
+          color={iconColor ?? colors.primary}
         />
+      </View>
+      <Text style={[styles.toggleLabel, { color: colors.foreground }]}>{label}</Text>
+      <Switch
+        value={value}
+        onValueChange={onToggle}
+        trackColor={{ false: colors.border, true: colors.primary + "88" }}
+        thumbColor={value ? colors.primary : colors.mutedForeground}
+        ios_backgroundColor={colors.border}
+        style={{ transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }] }}
+      />
+    </Pressable>
+  );
+}
+
+function LogRow({
+  entry,
+  colors,
+  habits,
+  showDate,
+  isLast,
+}: {
+  entry: LogEntry;
+  colors: any;
+  habits: { id: string; color: string; icon: string }[];
+  showDate: boolean;
+  isLast: boolean;
+}) {
+  const color = getHabitColor(entry.habitId, habits);
+  const icon = habits.find((h) => h.id === entry.habitId)?.icon ?? "check-circle-outline";
+  return (
+    <View style={[styles.logRow, !isLast && { borderBottomWidth: 1, borderBottomColor: colors.border + "60" }]}>
+      <View style={styles.logTimestamp}>
+        {showDate && (
+          <Text style={[styles.logDate, { color: colors.mutedForeground }]}>
+            {formatDate(entry.timestamp)}
+          </Text>
+        )}
+        <Text style={[styles.logTime, { color: colors.mutedForeground }]}>
+          {formatTime(entry.timestamp)}
+        </Text>
+      </View>
+      <View style={[styles.logIconWrap, { backgroundColor: color + "22" }]}>
+        <MaterialCommunityIcons name={icon as any} size={14} color={color} />
       </View>
       <View style={styles.logContent}>
         <Text style={[styles.logName, { color: colors.foreground }]} numberOfLines={1}>
           {entry.habitName}
+          {entry.subLabel ? (
+            <Text style={{ color: colors.mutedForeground, fontFamily: "Inter_400Regular" }}>
+              {" · "}{entry.subLabel}
+            </Text>
+          ) : null}
         </Text>
-        {(entry.subLabel || entry.notes) && (
+        {entry.notes ? (
           <Text style={[styles.logSub, { color: colors.mutedForeground }]} numberOfLines={1}>
-            {entry.subLabel ?? ""}
-            {entry.notes ? (entry.subLabel ? ` — ${entry.notes}` : entry.notes) : ""}
+            {entry.notes}
           </Text>
-        )}
+        ) : null}
       </View>
     </View>
   );
@@ -290,95 +606,69 @@ const styles = StyleSheet.create({
   timeBar: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
     flexWrap: "wrap",
   },
   timeLabel: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-  },
-  timeDropdown: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  timeDropdownText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
+    flex: 1,
   },
   rangePills: {
     flexDirection: "row",
-    gap: 10,
-    flex: 1,
-    justifyContent: "flex-end",
+    gap: 6,
   },
   rangePill: {
-    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   rangePillText: {
-    fontSize: 13,
+    fontSize: 12,
   },
   chartsRow: {
     flexDirection: "row",
     gap: 8,
   },
-  bottomRow: {
-    gap: 8,
-  },
-  logsCard: {
-    borderRadius: 12,
+  card: {
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 12,
-    gap: 8,
+    padding: 14,
+    gap: 10,
   },
-  settingsCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    gap: 8,
-  },
-  settingsHeader: {
+  cardHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  settingsDesc: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 18,
-  },
-  settingsHabits: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  settingsChip: {
-    borderRadius: 20,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  settingsChipText: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-  },
   cardTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
+  },
+  cardMeta: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+  },
+  emptyState: {
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 12,
   },
   emptyText: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
-    paddingVertical: 8,
+  },
+  moreLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    paddingTop: 4,
   },
   emptyChart: {
     borderRadius: 12,
@@ -391,12 +681,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
+    paddingVertical: 8,
+  },
+  logTimestamp: {
+    width: 54,
+    gap: 1,
+  },
+  logDate: {
+    fontSize: 9,
+    fontFamily: "Inter_400Regular",
   },
   logTime: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Inter_500Medium",
-    width: 56,
-    paddingTop: 1,
   },
   logIconWrap: {
     width: 26,
@@ -404,10 +701,11 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 1,
   },
   logContent: {
     flex: 1,
-    gap: 1,
+    gap: 2,
   },
   logName: {
     fontSize: 13,
@@ -417,10 +715,56 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_400Regular",
   },
-  footer: {
-    fontSize: 11,
+  settingsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  settingsTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  settingsBody: {
+    gap: 14,
+  },
+  settingsSection: {
+    gap: 2,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  chipText: {
+    fontSize: 12,
+  },
+  divider: {
+    height: 1,
+    borderRadius: 1,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 2,
+  },
+  toggleIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  toggleLabel: {
+    flex: 1,
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    lineHeight: 16,
   },
 });
