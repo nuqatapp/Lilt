@@ -58,7 +58,7 @@ const DEFAULT_HABITS: Habit[] = [
     color: "#8fa3c2",
     group: "Body",
     subHabits: [
-      { id: "shower_quick",   label: "Quick rinse",     icon: "lightning-bolt",             color: "#8fa3c2" },
+      { id: "shower_quick",   label: "Quick rinse",     icon: "lightning-bolt-outline",     color: "#8fa3c2" },
       { id: "shower_full",    label: "Full shower",     icon: "shower-head",                color: "#7f93b2" },
       { id: "shower_hair",    label: "Hair wash",       icon: "hair-dryer-outline",         color: "#9fb3d2" },
       { id: "shower_skin",    label: "Skincare",        icon: "face-woman-shimmer-outline", color: "#c8a0ae" },
@@ -90,8 +90,8 @@ const DEFAULT_HABITS: Habit[] = [
     color: "#c49070",
     group: "Body",
     subHabits: [
-      { id: "eat_breakfast",  label: "Breakfast",    icon: "coffee",                 color: "#c0a870" },
-      { id: "eat_lunch",      label: "Lunch",        icon: "food",                   color: "#c49070" },
+      { id: "eat_breakfast",  label: "Breakfast",    icon: "coffee-outline",         color: "#c0a870" },
+      { id: "eat_lunch",      label: "Lunch",        icon: "food-outline",           color: "#c49070" },
       { id: "eat_dinner",     label: "Dinner",       icon: "silverware-fork-knife",  color: "#b48060" },
       { id: "eat_snack",      label: "Snack",        icon: "food-apple-outline",     color: "#d4a080" },
       { id: "eat_dessert",    label: "Dessert",      icon: "cake-variant-outline",   color: "#c8a0ae" },
@@ -103,14 +103,14 @@ const DEFAULT_HABITS: Habit[] = [
   {
     id: "drinking_water",
     name: "Drinking water",
-    icon: "water",
+    icon: "water-outline",
     iconSet: "MaterialCommunityIcons",
     color: "#7fa8d8",
     group: "Body",
     subHabits: [
       { id: "water_small",  label: "Small glass",        icon: "cup-water",           color: "#9fb3d2" },
       { id: "water_bottle", label: "Bottle finished",    icon: "bottle-soda-outline", color: "#7fa8d8" },
-      { id: "water_elec",   label: "Electrolytes",       icon: "lightning-bolt",      color: "#8fa3c2" },
+      { id: "water_elec",   label: "Electrolytes",       icon: "lightning-bolt-outline",color: "#8fa3c2" },
       { id: "water_remind", label: "Hydration reminder", icon: "bell-outline",        color: "#a8a0c8" },
     ],
   },
@@ -155,11 +155,11 @@ const DEFAULT_HABITS: Habit[] = [
     group: "Body",
     subHabits: [
       { id: "ex_cardio",   label: "Cardio",        icon: "heart-pulse",      color: "#c8a0ae" },
-      { id: "ex_strength", label: "Strength",      icon: "weight-lifter",    color: "#8aaf98" },
-      { id: "ex_hiit",     label: "HIIT",          icon: "lightning-bolt",   color: "#c0a870" },
+      { id: "ex_strength", label: "Strength",      icon: "weight-lifter-outline",color: "#8aaf98" },
+      { id: "ex_hiit",     label: "HIIT",          icon: "lightning-bolt-outline",color: "#c0a870" },
       { id: "ex_home",     label: "Home workout",  icon: "home-outline",     color: "#9fb3d2" },
       { id: "ex_gym",      label: "Gym workout",   icon: "dumbbell",         color: "#8090a8" },
-      { id: "ex_sports",   label: "Sports",        icon: "basketball",       color: "#c0a870" },
+      { id: "ex_sports",   label: "Sports",        icon: "basketball-outline",color: "#c0a870" },
       { id: "ex_mobility", label: "Mobility",      icon: "arm-flex-outline", color: "#78a085" },
       { id: "ex_recovery", label: "Recovery",      icon: "meditation",       color: "#a8a0c8" },
     ],
@@ -176,7 +176,7 @@ const DEFAULT_HABITS: Habit[] = [
       { id: "med_pm",     label: "Night meds",    icon: "weather-night",      color: "#9890b8" },
       { id: "med_vit",    label: "Vitamins",      icon: "leaf",               color: "#8aaf98" },
       { id: "med_pain",   label: "Pain relief",   icon: "plus-circle-outline",color: "#c8a0ae" },
-      { id: "med_refill", label: "Refill taken",  icon: "package-variant",    color: "#8090a8" },
+      { id: "med_refill", label: "Refill taken",  icon: "package-variant-outline",color: "#8090a8" },
     ],
   },
   {
@@ -233,7 +233,7 @@ const DEFAULT_HABITS: Habit[] = [
   {
     id: "reading",
     name: "Reading",
-    icon: "book-open-variant",
+    icon: "book-open-outline",
     iconSet: "MaterialCommunityIcons",
     color: "#b09870",
     group: "Productivity",
@@ -291,8 +291,8 @@ const DEFAULT_HABITS: Habit[] = [
     color: "#c49070",
     group: "Home",
     subHabits: [
-      { id: "cook_breakfast", label: "Breakfast prep", icon: "coffee",               color: "#c0a870" },
-      { id: "cook_lunch",     label: "Lunch prep",     icon: "food",                 color: "#c49070" },
+      { id: "cook_breakfast", label: "Breakfast prep", icon: "coffee-outline",       color: "#c0a870" },
+      { id: "cook_lunch",     label: "Lunch prep",     icon: "food-outline",         color: "#c49070" },
       { id: "cook_dinner",    label: "Dinner prep",    icon: "silverware-fork-knife",color: "#b48060" },
       { id: "cook_baking",    label: "Baking",         icon: "cake-variant-outline", color: "#c8a0ae" },
       { id: "cook_prep",      label: "Meal prep",      icon: "pot-steam-outline",    color: "#c0886a" },
@@ -358,7 +358,7 @@ const DEFAULT_HABITS: Habit[] = [
     subHabits: [
       { id: "rest_lying", label: "Lying down", icon: "bed-outline",   color: "#a8a0c8" },
       { id: "rest_relax", label: "Relaxing",   icon: "sofa-outline",  color: "#c0b0a0" },
-      { id: "rest_break", label: "Break",      icon: "coffee",        color: "#c0a870" },
+      { id: "rest_break", label: "Break",      icon: "coffee-outline",color: "#c0a870" },
       { id: "rest_recov", label: "Recovery",   icon: "heart-outline", color: "#c8a0ae" },
       { id: "rest_quiet", label: "Quiet time", icon: "volume-off",    color: "#8090a8" },
     ],
@@ -372,7 +372,7 @@ const DEFAULT_HABITS: Habit[] = [
     group: "Lifestyle",
     subHabits: [
       { id: "soc_family",  label: "Family",       icon: "home-heart",           color: "#c8a0ae" },
-      { id: "soc_friends", label: "Friends",      icon: "account-multiple",     color: "#d4a870" },
+      { id: "soc_friends", label: "Friends",      icon: "account-multiple-outline",color: "#d4a870" },
       { id: "soc_guests",  label: "Guests",       icon: "account-plus-outline", color: "#c0a870" },
       { id: "soc_call",    label: "Phone call",   icon: "phone-outline",        color: "#8aaf98" },
       { id: "soc_outing",  label: "Group outing", icon: "map-marker-outline",   color: "#c0a870" },
@@ -381,7 +381,7 @@ const DEFAULT_HABITS: Habit[] = [
   {
     id: "screen_time",
     name: "Screen time",
-    icon: "monitor-screenshot",
+    icon: "monitor",
     iconSet: "MaterialCommunityIcons",
     color: "#8090a8",
     group: "Lifestyle",
@@ -418,7 +418,7 @@ const DEFAULT_HABITS: Habit[] = [
     group: "Lifestyle",
     subHabits: [
       { id: "hob_draw",   label: "Drawing",      icon: "draw",                   color: "#c0a870" },
-      { id: "hob_music",  label: "Music",        icon: "music-note",             color: "#b8a8d0" },
+      { id: "hob_music",  label: "Music",        icon: "music-note-outline",     color: "#b8a8d0" },
       { id: "hob_write",  label: "Writing",      icon: "pencil-outline",         color: "#88a878" },
       { id: "hob_photo",  label: "Photography",  icon: "camera-outline",         color: "#8090a8" },
       { id: "hob_game",   label: "Gaming",       icon: "gamepad-variant-outline",color: "#8fa3c2" },
