@@ -31,7 +31,7 @@ const GROUP_ICONS: Record<Habit["group"], string> = {
 interface HabitGridProps {
   habits: Habit[];
   favoriteIds: string[];
-  onLog: (habit: Habit, subHabit?: SubHabit, notes?: string) => void;
+  onLog: (habit: Habit, subHabit?: SubHabit, notes?: string, timestamp?: Date) => void;
   onDelete?: (id: string) => void;
   onToggleFavorite: (id: string) => void;
 }
@@ -40,6 +40,40 @@ interface PopupState {
   habit: Habit;
   selectedSub: SubHabit | null;
   notes: string;
+  logDate: Date;
+  datePickerOpen: boolean;
+}
+
+// ── Date-time helpers ─────────────────────────────────────────────────────────
+function shiftDay(d: Date, delta: number): Date {
+  const n = new Date(d); n.setDate(n.getDate() + delta); return n;
+}
+function shiftHour(d: Date, delta: number): Date {
+  const n = new Date(d); n.setHours((n.getHours() + delta + 24) % 24); return n;
+}
+function shiftMinute(d: Date, delta: number): Date {
+  const n = new Date(d); n.setMinutes((n.getMinutes() + delta + 60) % 60); return n;
+}
+function toggleAMPM(d: Date): Date {
+  const n = new Date(d); n.setHours((n.getHours() + 12) % 24); return n;
+}
+function formatChipDate(d: Date): string {
+  const now = new Date();
+  const yest = new Date(now); yest.setDate(now.getDate() - 1);
+  const h = d.getHours(), m = d.getMinutes().toString().padStart(2, "0");
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = String(h % 12 || 12);
+  const time = `${h12}:${m} ${ampm}`;
+  if (d.toDateString() === now.toDateString()) return `Today, ${time}`;
+  if (d.toDateString() === yest.toDateString()) return `Yesterday, ${time}`;
+  const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${time}`;
+}
+function formatExpandedDate(d: Date): string {
+  const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 const DOUBLE_TAP_MS = 300;
@@ -83,7 +117,7 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
       if (habit.isCustom && habit.subHabits.length === 0) {
         setDeletePopup(habit);
       } else {
-        setPopup({ habit, selectedSub: null, notes: "" });
+        setPopup({ habit, selectedSub: null, notes: "", logDate: new Date(), datePickerOpen: false });
       }
     },
     []
@@ -92,7 +126,7 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
   const handleSubmitLog = useCallback(() => {
     if (!popup) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onLog(popup.habit, popup.selectedSub ?? undefined, popup.notes.trim() || undefined);
+    onLog(popup.habit, popup.selectedSub ?? undefined, popup.notes.trim() || undefined, popup.logDate);
     setPopup(null);
   }, [popup, onLog]);
 
@@ -258,6 +292,87 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
                   <MaterialCommunityIcons name="close" size={20} color={colors.mutedForeground} />
                 </Pressable>
               </View>
+
+              {/* ── Date / time chip ─────────────────────────── */}
+              <Pressable
+                onPress={() => setPopup((p) => p ? { ...p, datePickerOpen: !p.datePickerOpen } : null)}
+                style={[styles.dateChip, { backgroundColor: colors.background, borderColor: colors.border }]}
+              >
+                <MaterialCommunityIcons name="calendar-clock" size={16} color={colors.primary} />
+                <Text style={[styles.dateChipText, { color: colors.foreground }]}>
+                  {formatChipDate(popup.logDate)}
+                </Text>
+                <MaterialCommunityIcons
+                  name={popup.datePickerOpen ? "chevron-up" : "pencil-outline"}
+                  size={14}
+                  color={colors.mutedForeground}
+                />
+              </Pressable>
+
+              {/* ── Inline date-time editor ───────────────────── */}
+              {popup.datePickerOpen && (
+                <View style={[styles.dateEditor, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  {/* Day row */}
+                  <View style={styles.dateEditorRow}>
+                    <Pressable
+                      onPress={() => setPopup((p) => p ? { ...p, logDate: shiftDay(p.logDate, -1) } : null)}
+                      style={styles.arrowBtn} hitSlop={10}
+                    >
+                      <MaterialCommunityIcons name="chevron-left" size={22} color={colors.foreground} />
+                    </Pressable>
+                    <Text style={[styles.dateEditorLabel, { color: colors.foreground }]}>
+                      {formatExpandedDate(popup.logDate)}
+                    </Text>
+                    <Pressable
+                      onPress={() => setPopup((p) => p ? { ...p, logDate: shiftDay(p.logDate, 1) } : null)}
+                      style={styles.arrowBtn} hitSlop={10}
+                    >
+                      <MaterialCommunityIcons name="chevron-right" size={22} color={colors.foreground} />
+                    </Pressable>
+                  </View>
+
+                  {/* Time row */}
+                  <View style={styles.timeRow}>
+                    {/* Hours */}
+                    <View style={styles.timeUnit}>
+                      <Pressable onPress={() => setPopup((p) => p ? { ...p, logDate: shiftHour(p.logDate, 1) } : null)} hitSlop={10}>
+                        <MaterialCommunityIcons name="chevron-up" size={20} color={colors.mutedForeground} />
+                      </Pressable>
+                      <Text style={[styles.timeDigit, { color: colors.foreground }]}>
+                        {String(popup.logDate.getHours() % 12 || 12).padStart(2, "0")}
+                      </Text>
+                      <Pressable onPress={() => setPopup((p) => p ? { ...p, logDate: shiftHour(p.logDate, -1) } : null)} hitSlop={10}>
+                        <MaterialCommunityIcons name="chevron-down" size={20} color={colors.mutedForeground} />
+                      </Pressable>
+                    </View>
+
+                    <Text style={[styles.timeSep, { color: colors.foreground }]}>:</Text>
+
+                    {/* Minutes */}
+                    <View style={styles.timeUnit}>
+                      <Pressable onPress={() => setPopup((p) => p ? { ...p, logDate: shiftMinute(p.logDate, 5) } : null)} hitSlop={10}>
+                        <MaterialCommunityIcons name="chevron-up" size={20} color={colors.mutedForeground} />
+                      </Pressable>
+                      <Text style={[styles.timeDigit, { color: colors.foreground }]}>
+                        {String(popup.logDate.getMinutes()).padStart(2, "0")}
+                      </Text>
+                      <Pressable onPress={() => setPopup((p) => p ? { ...p, logDate: shiftMinute(p.logDate, -5) } : null)} hitSlop={10}>
+                        <MaterialCommunityIcons name="chevron-down" size={20} color={colors.mutedForeground} />
+                      </Pressable>
+                    </View>
+
+                    {/* AM / PM */}
+                    <Pressable
+                      onPress={() => setPopup((p) => p ? { ...p, logDate: toggleAMPM(p.logDate) } : null)}
+                      style={[styles.ampmBtn, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "50" }]}
+                    >
+                      <Text style={[styles.ampmText, { color: colors.primary }]}>
+                        {popup.logDate.getHours() >= 12 ? "PM" : "AM"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
 
               {/* Sub-habit picker */}
               {popup.habit.subHabits.length > 0 && (
@@ -456,4 +571,25 @@ const styles = StyleSheet.create({
     borderRadius: 8, paddingVertical: 9, alignItems: "center", justifyContent: "center",
   },
   deleteBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+
+  // Date-time picker
+  dateChip: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    borderWidth: 1, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 10,
+  },
+  dateChipText: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium" },
+  dateEditor: {
+    borderWidth: 1, borderRadius: 12,
+    padding: 14, gap: 14,
+  },
+  dateEditorRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  arrowBtn: { padding: 4 },
+  dateEditorLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  timeRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16 },
+  timeUnit: { alignItems: "center", gap: 2 },
+  timeDigit: { fontSize: 30, fontFamily: "Inter_700Bold", minWidth: 48, textAlign: "center" },
+  timeSep: { fontSize: 26, fontFamily: "Inter_700Bold", marginBottom: 2 },
+  ampmBtn: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  ampmText: { fontSize: 14, fontFamily: "Inter_700Bold" },
 });

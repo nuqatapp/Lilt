@@ -14,7 +14,7 @@ export interface LogEntry {
 
 interface LogContextValue {
   logs: LogEntry[];
-  addLog: (entry: Omit<LogEntry, "id" | "timestamp" | "personId">) => void;
+  addLog: (entry: Omit<LogEntry, "id" | "timestamp" | "personId">, timestamp?: Date) => void;
   getLogsForDate: (date: string) => LogEntry[];
   getLogsForRange: (start: string, end: string) => LogEntry[];
   getHabitCount: (habitId: string, startDate: string, endDate: string) => number;
@@ -46,12 +46,12 @@ export function LogProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addLog = useCallback(
-    (entry: Omit<LogEntry, "id" | "timestamp" | "personId">) => {
+    (entry: Omit<LogEntry, "id" | "timestamp" | "personId">, timestamp?: Date) => {
       const newEntry: LogEntry = {
         ...entry,
         personId: currentPersonId ?? undefined,
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
-        timestamp: new Date().toISOString(),
+        timestamp: (timestamp ?? new Date()).toISOString(),
       };
       saveLogs([newEntry, ...logs]);
     },

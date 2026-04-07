@@ -37,14 +37,12 @@ export function LogActivityView({ personName }: LogActivityViewProps) {
   const [showAddModal, setShowAddModal] = useState(false);
 
   const handleLog = useCallback(
-    (habit: Habit, subHabit?: SubHabit, notes?: string) => {
-      addLog({
-        habitId: habit.id,
-        habitName: habit.name,
-        subLabel: subHabit?.label,
-        notes: notes || undefined,
-      });
-      setLastLogged(new Date());
+    (habit: Habit, subHabit?: SubHabit, notes?: string, timestamp?: Date) => {
+      addLog(
+        { habitId: habit.id, habitName: habit.name, subLabel: subHabit?.label, notes: notes || undefined },
+        timestamp,
+      );
+      setLastLogged(timestamp ?? new Date());
       setLastLabel(subHabit ? `${habit.name} · ${subHabit.label}` : habit.name);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
