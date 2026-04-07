@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -52,6 +53,10 @@ function PersonModal({ visible, initialName = "", initialColor, onClose, onSave 
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={[styles.modalSheet, { backgroundColor: colors.card }]}>
           <Text style={[styles.modalTitle, { color: colors.foreground }]}>
@@ -101,6 +106,7 @@ function PersonModal({ visible, initialName = "", initialColor, onClose, onSave 
           </View>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
