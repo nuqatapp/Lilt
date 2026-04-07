@@ -42,9 +42,9 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   logo: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 104,
+    height: 104,
+    borderRadius: 28,
   },
   content: {
     flex: 1,
