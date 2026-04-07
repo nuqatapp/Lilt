@@ -59,7 +59,6 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
         isLongPressing.current = false;
         return;
       }
-      if (habit.subHabits.length > 0) return;
       const now = Date.now();
       const last = lastTap.current[habit.id] ?? 0;
       if (now - last < DOUBLE_TAP_MS) {
@@ -142,7 +141,7 @@ export function HabitGrid({ habits, favoriteIds, onLog, onDelete, onToggleFavori
           {habit.name}
         </Text>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          {habit.subHabits.length > 0 ? "long-press" : "double-tap"}
+          {"double-tap"}
         </Text>
         {habit.isCustom && (
           <View style={[styles.customBadge, { backgroundColor: habit.color + "30" }]}>
