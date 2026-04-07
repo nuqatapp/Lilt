@@ -24,7 +24,11 @@ function formatLogTime(d: Date) {
   return `${h}:${m} ${ampm}, ${months[d.getMonth()]} ${d.getDate()}`;
 }
 
-export function LogActivityView() {
+interface LogActivityViewProps {
+  personName?: string;
+}
+
+export function LogActivityView({ personName }: LogActivityViewProps) {
   const colors = useColors();
   const { habits, favoriteIds, toggleFavorite, addCustomHabit, removeHabit } = useHabits();
   const { addLog } = useLogs();
@@ -73,6 +77,7 @@ export function LogActivityView() {
             <MaterialCommunityIcons name="check-circle" size={15} color={colors.primary} />
             <Text style={[styles.loggedText, { color: colors.primary }]}>
               Logged <Text style={{ fontFamily: "Inter_600SemiBold" }}>{lastLabel}</Text>
+              {personName ? ` for ${personName}` : ""}
               {" · "}{formatLogTime(lastLogged)}
             </Text>
           </View>

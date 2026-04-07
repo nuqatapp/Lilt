@@ -1,14 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { usePeople } from "./PeopleContext";
 
 export interface LogEntry {
   id: string;
+  personId?: string;
   habitId: string;
   habitName: string;
   subLabel?: string;
@@ -18,7 +14,7 @@ export interface LogEntry {
 
 interface LogContextValue {
   logs: LogEntry[];
-  addLog: (entry: Omit<LogEntry, "id" | "timestamp">) => void;
+  addLog: (entry: Omit<LogEntry, "id" | "timestamp" | "personId">) => void;
   getLogsForDate: (date: string) => LogEntry[];
   getLogsForRange: (start: string, end: string) => LogEntry[];
   getHabitCount: (habitId: string, startDate: string, endDate: string) => number;
@@ -31,6 +27,7 @@ const MAX_LOGS = 5000;
 
 export function LogProvider({ children }: { children: React.ReactNode }) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const { currentPersonId } = usePeople();
 
   useEffect(() => {
     AsyncStorage.getItem(LOGS_KEY)
@@ -49,23 +46,30 @@ export function LogProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addLog = useCallback(
-    (entry: Omit<LogEntry, "id" | "timestamp">) => {
+    (entry: Omit<LogEntry, "id" | "timestamp" | "personId">) => {
       const newEntry: LogEntry = {
         ...entry,
+        personId: currentPersonId ?? undefined,
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         timestamp: new Date().toISOString(),
       };
       saveLogs([newEntry, ...logs]);
     },
-    [logs, saveLogs]
+    [logs, saveLogs, currentPersonId]
+  );
+
+  // Backward-compat: old entries without personId are visible to everyone
+  const forPerson = useCallback(
+    (l: LogEntry) => !l.personId || !currentPersonId || l.personId === currentPersonId,
+    [currentPersonId]
   );
 
   const getLogsForDate = useCallback(
     (date: string) =>
-      logs.filter((l) => l.timestamp.startsWith(date)).sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      ),
-    [logs]
+      logs
+        .filter((l) => forPerson(l) && l.timestamp.startsWith(date))
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+    [logs, forPerson]
   );
 
   const getLogsForRange = useCallback(
@@ -74,12 +78,13 @@ export function LogProvider({ children }: { children: React.ReactNode }) {
       const endMs = new Date(end).setHours(23, 59, 59, 999);
       return logs
         .filter((l) => {
+          if (!forPerson(l)) return false;
           const t = new Date(l.timestamp).getTime();
           return t >= startMs && t <= endMs;
         })
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     },
-    [logs]
+    [logs, forPerson]
   );
 
   const getHabitCount = useCallback(
@@ -87,17 +92,15 @@ export function LogProvider({ children }: { children: React.ReactNode }) {
       const startMs = new Date(startDate).setHours(0, 0, 0, 0);
       const endMs = new Date(endDate).setHours(23, 59, 59, 999);
       return logs.filter((l) => {
-        if (l.habitId !== habitId) return false;
+        if (!forPerson(l) || l.habitId !== habitId) return false;
         const t = new Date(l.timestamp).getTime();
         return t >= startMs && t <= endMs;
       }).length;
     },
-    [logs]
+    [logs, forPerson]
   );
 
-  const clearLogs = useCallback(() => {
-    saveLogs([]);
-  }, [saveLogs]);
+  const clearLogs = useCallback(() => saveLogs([]), [saveLogs]);
 
   return (
     <LogContext.Provider value={{ logs, addLog, getLogsForDate, getLogsForRange, getHabitCount, clearLogs }}>

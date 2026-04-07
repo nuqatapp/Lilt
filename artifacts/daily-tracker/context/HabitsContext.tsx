@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { usePeople } from "./PeopleContext";
 
 export interface SubHabit {
   id: string;
@@ -35,7 +36,7 @@ interface HabitsContextValue {
 
 const HabitsContext = createContext<HabitsContextValue | null>(null);
 const CUSTOM_KEY = "@trace_custom_habits_v1";
-const FAVORITES_KEY = "@trace_favorites_v1";
+const FAVORITES_KEY = "@lilt_favorites_v2";
 
 // ── Soft UI desaturated pastel palette ──────────────────────────────────────
 // Sage Green family:      #8aaf98  #78a085  #9abf8a  #7a9f88
@@ -444,14 +445,18 @@ const DEFAULT_HABITS: Habit[] = [
 
 export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const [customHabits, setCustomHabits] = useState<Habit[]>([]);
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [allFavorites, setAllFavorites] = useState<Record<string, string[]>>({});
+  const { currentPersonId } = usePeople();
+
+  const personKey = currentPersonId ?? "__global__";
+  const favoriteIds: string[] = allFavorites[personKey] ?? [];
 
   useEffect(() => {
     AsyncStorage.getItem(CUSTOM_KEY)
       .then((v) => { if (v) setCustomHabits(JSON.parse(v)); })
       .catch(() => {});
     AsyncStorage.getItem(FAVORITES_KEY)
-      .then((v) => { if (v) setFavoriteIds(JSON.parse(v)); })
+      .then((v) => { if (v) setAllFavorites(JSON.parse(v)); })
       .catch(() => {});
   }, []);
 
@@ -461,12 +466,14 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleFavorite = useCallback((id: string) => {
-    setFavoriteIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
+    setAllFavorites((prev) => {
+      const current = prev[personKey] ?? [];
+      const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+      const updated = { ...prev, [personKey]: next };
+      AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated)).catch(() => {});
+      return updated;
     });
-  }, []);
+  }, [personKey]);
 
   const addCustomHabit = useCallback(
     (name: string, icon: string, color: string) => {
