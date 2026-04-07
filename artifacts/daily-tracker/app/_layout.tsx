@@ -17,6 +17,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HabitsProvider } from "@/context/HabitsContext";
 import { LogProvider } from "@/context/LogContext";
 import { PeopleProvider } from "@/context/PeopleContext";
+import { SettingsProvider } from "@/context/SettingsContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -52,6 +53,7 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
+    <SettingsProvider>
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
@@ -69,5 +71,6 @@ export default function RootLayout() {
         </QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
+    </SettingsProvider>
   );
 }

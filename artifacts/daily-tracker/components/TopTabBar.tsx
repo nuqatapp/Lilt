@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSettings } from "@/context/SettingsContext";
 import { useColors } from "@/hooks/useColors";
 
 interface TopTabBarProps {
@@ -9,43 +10,43 @@ interface TopTabBarProps {
 
 export function TopTabBar({ activeTab, onTabChange }: TopTabBarProps) {
   const colors = useColors();
+  const { t, isRTL } = useSettings();
   const logActive = activeTab === "log";
   const dashActive = activeTab === "dashboard";
 
+  const tabs = isRTL
+    ? [
+        { key: "dashboard" as const, label: t("dashboard"), active: dashActive, bg: colors.tabInactive, left: false },
+        { key: "log" as const, label: t("logActivity"), active: logActive, bg: colors.primary, left: true },
+      ]
+    : [
+        { key: "log" as const, label: t("logActivity"), active: logActive, bg: colors.primary, left: true },
+        { key: "dashboard" as const, label: t("dashboard"), active: dashActive, bg: colors.tabInactive, left: false },
+      ];
+
   return (
     <View style={[styles.container, { shadowColor: colors.shadow }]}>
-      <Pressable
-        onPress={() => onTabChange("log")}
-        style={[
-          styles.tab,
-          {
-            backgroundColor: colors.primary,
-            opacity: logActive ? 1 : 0.55,
-            borderTopLeftRadius: 12,
-            borderBottomLeftRadius: 12,
-          },
-        ]}
-      >
-        <Text style={[styles.tabText, { color: "#ffffff", opacity: logActive ? 1 : 0.85 }]}>
-          Log Activity
-        </Text>
-      </Pressable>
-      <Pressable
-        onPress={() => onTabChange("dashboard")}
-        style={[
-          styles.tab,
-          {
-            backgroundColor: colors.tabInactive,
-            opacity: dashActive ? 1 : 0.55,
-            borderTopRightRadius: 12,
-            borderBottomRightRadius: 12,
-          },
-        ]}
-      >
-        <Text style={[styles.tabText, { color: "#ffffff", opacity: dashActive ? 1 : 0.85 }]}>
-          Dashboard
-        </Text>
-      </Pressable>
+      {tabs.map((tab, idx) => (
+        <Pressable
+          key={tab.key}
+          onPress={() => onTabChange(tab.key)}
+          style={[
+            styles.tab,
+            {
+              backgroundColor: tab.bg,
+              opacity: tab.active ? 1 : 0.55,
+              borderTopLeftRadius: idx === 0 ? 12 : 0,
+              borderBottomLeftRadius: idx === 0 ? 12 : 0,
+              borderTopRightRadius: idx === tabs.length - 1 ? 12 : 0,
+              borderBottomRightRadius: idx === tabs.length - 1 ? 12 : 0,
+            },
+          ]}
+        >
+          <Text style={[styles.tabText, { color: "#ffffff", opacity: tab.active ? 1 : 0.85 }]}>
+            {tab.label}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
