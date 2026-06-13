@@ -20,6 +20,7 @@ import { TopTabBar } from "@/components/TopTabBar";
 import { PERSON_COLORS, usePeople } from "@/context/PeopleContext";
 import { useSettings, type Language, type Theme } from "@/context/SettingsContext";
 import { useColors } from "@/hooks/useColors";
+import { exportData, importData, clearAllData } from "@/utils/DataBackup";
 
 const logo = require("@/assets/images/icon.png");
 
@@ -35,6 +36,8 @@ function getInitials(name: string): string {
 function SettingsModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const colors = useColors();
   const { language, theme, isRTL, setLanguage, setTheme, t } = useSettings();
+  const [isExporting, setIsExporting] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   type LangOption = { value: Language; label: string };
   type ThemeOption = { value: Theme; label: string; icon: string };
@@ -49,81 +52,238 @@ function SettingsModal({ visible, onClose }: { visible: boolean; onClose: () => 
     { value: "dark",  label: t("dark"),  icon: "weather-night" },
   ];
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    const result = await exportData();
+    setIsExporting(false);
+    if (!result.success) {
+      Alert.alert(t("exportError"), result.message);
+    }
+  };
+
+  const handleImport = () => {
+    Alert.alert(
+      t("importData"),
+      t("importDataDesc"),
+      [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: "Restore",
+          onPress: async () => {
+            if (Platform.OS === "ios") {
+              Alert.prompt(
+                t("importData"),
+                "Paste your backup JSON here",
+                [
+                  { text: t("cancel"), style: "cancel" },
+                  {
+                    text: "Restore",
+                    onPress: async (jsonString?: string) => {
+                      if (!jsonString?.trim()) {
+                        Alert.alert(t("importError"), t("importError"));
+                        return;
+                      }
+                      const result = await importData(jsonString);
+                      if (result.success) {
+                        Alert.alert(t("importSuccess"), t("importSuccess"), [
+                          { text: "OK", onPress: onClose },
+                        ]);
+                      } else {
+                        Alert.alert(t("importError"), result.message);
+                      }
+                    },
+                  },
+                ],
+                "plain-text"
+              );
+            } else {
+              Alert.alert(t("importError"), "Paste import is only available on iOS. Please use a backup file.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClearAll = () => {
+    Alert.alert(
+      t("clearConfirm"),
+      t("clearConfirmMessage"),
+      [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("deleteAll"),
+          style: "destructive",
+          onPress: async () => {
+            setIsClearing(true);
+            const result = await clearAllData();
+            setIsClearing(false);
+            if (result.success) {
+              Alert.alert(t("clearSuccess"), "The app will need to be restarted.", [
+                { text: "OK", onPress: onClose },
+              ]);
+            } else {
+              Alert.alert(t("exportError"), result.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={[styles.modalSheet, { backgroundColor: colors.card }]}>
-          {/* Header */}
-          <View style={[styles.settingsHeader, isRTL && styles.rowReverse]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>{t("settings")}</Text>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <MaterialCommunityIcons name="close" size={22} color={colors.mutedForeground} />
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
+            {/* Header */}
+            <View style={[styles.settingsHeader, isRTL && styles.rowReverse]}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                {t("settings")}
+              </Text>
+              <Pressable onPress={onClose} hitSlop={10}>
+                <MaterialCommunityIcons name="close" size={22} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+
+            {/* Language section */}
+            <Text style={[styles.settingsSection, { color: colors.mutedForeground }, isRTL && styles.textRight]}>
+              {t("language")}
+            </Text>
+            <View style={[styles.segmented, { backgroundColor: colors.background }]}>
+              {langOptions.map((opt) => {
+                const active = language === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => setLanguage(opt.value)}
+                    style={[styles.segment, active && { backgroundColor: colors.primary }]}
+                  >
+                    <Text style={[styles.segmentText, { color: active ? "#fff" : colors.mutedForeground }]}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Theme section */}
+            <Text style={[styles.settingsSection, { color: colors.mutedForeground }, isRTL && styles.textRight]}>
+              {t("theme")}
+            </Text>
+            <View style={[styles.segmented, { backgroundColor: colors.background }]}>
+              {themeOptions.map((opt) => {
+                const active = theme === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => setTheme(opt.value)}
+                    style={[styles.segment, styles.themeSegment, active && { backgroundColor: colors.primary }]}
+                  >
+                    <MaterialCommunityIcons
+                      name={opt.icon as any}
+                      size={18}
+                      color={active ? "#fff" : colors.mutedForeground}
+                    />
+                    <Text style={[styles.segmentText, { color: active ? "#fff" : colors.mutedForeground, marginLeft: 6 }]}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Data Management section */}
+            <Text style={[styles.settingsSection, { color: colors.mutedForeground, marginTop: 24 }, isRTL && styles.textRight]}>
+              {t("dataManagement")}
+            </Text>
+
+            {/* Export */}
+            <Pressable
+              onPress={handleExport}
+              disabled={isExporting}
+              style={[
+                styles.dataButton,
+                { backgroundColor: colors.card, borderColor: colors.primary, opacity: isExporting ? 0.6 : 1 },
+                isRTL && styles.rowReverse,
+              ]}
+            >
+              <View style={styles.buttonContent}>
+                <MaterialCommunityIcons
+                  name="download"
+                  size={20}
+                  color={colors.primary}
+                  style={isRTL && { marginLeft: 12 }}
+                />
+                <View style={isRTL ? { marginRight: 12 } : { marginLeft: 12 }}>
+                  <Text style={[styles.buttonLabel, { color: colors.foreground }]}>
+                    {isExporting ? t("exporting") : t("exportData")}
+                  </Text>
+                  <Text style={[styles.buttonDesc, { color: colors.mutedForeground }]}>
+                    {t("exportDataDesc")}
+                  </Text>
+                </View>
+              </View>
             </Pressable>
-          </View>
 
-          {/* Language section */}
-          <Text style={[styles.settingsSection, { color: colors.mutedForeground }, isRTL && styles.textRight]}>
-            {t("language")}
-          </Text>
-          <View style={[styles.segmented, { backgroundColor: colors.background }]}>
-            {langOptions.map((opt) => {
-              const active = language === opt.value;
-              return (
-                <Pressable
-                  key={opt.value}
-                  onPress={() => setLanguage(opt.value)}
-                  style={[
-                    styles.segment,
-                    active && { backgroundColor: colors.primary },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      { color: active ? "#fff" : colors.mutedForeground },
-                    ]}
-                  >
-                    {opt.label}
+            {/* Import */}
+            <Pressable
+              onPress={handleImport}
+              style={[
+                styles.dataButton,
+                { backgroundColor: colors.card, borderColor: colors.primary },
+                isRTL && styles.rowReverse,
+              ]}
+            >
+              <View style={styles.buttonContent}>
+                <MaterialCommunityIcons
+                  name="upload"
+                  size={20}
+                  color={colors.primary}
+                  style={isRTL && { marginLeft: 12 }}
+                />
+                <View style={isRTL ? { marginRight: 12 } : { marginLeft: 12 }}>
+                  <Text style={[styles.buttonLabel, { color: colors.foreground }]}>
+                    {t("importData")}
                   </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                  <Text style={[styles.buttonDesc, { color: colors.mutedForeground }]}>
+                    {t("importDataDesc")}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
 
-          {/* Theme section */}
-          <Text style={[styles.settingsSection, { color: colors.mutedForeground }, isRTL && styles.textRight]}>
-            {t("theme")}
-          </Text>
-          <View style={[styles.segmented, { backgroundColor: colors.background }]}>
-            {themeOptions.map((opt) => {
-              const active = theme === opt.value;
-              return (
-                <Pressable
-                  key={opt.value}
-                  onPress={() => setTheme(opt.value)}
-                  style={[
-                    styles.segment,
-                    styles.themeSegment,
-                    active && { backgroundColor: colors.primary },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name={opt.icon as any}
-                    size={18}
-                    color={active ? "#fff" : colors.mutedForeground}
-                  />
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      { color: active ? "#fff" : colors.mutedForeground, marginLeft: 6 },
-                    ]}
-                  >
-                    {opt.label}
+            {/* Clear All */}
+            <Pressable
+              onPress={handleClearAll}
+              disabled={isClearing}
+              style={[
+                styles.dataButton,
+                { backgroundColor: colors.card, borderColor: "#c87868", opacity: isClearing ? 0.6 : 1 },
+                isRTL && styles.rowReverse,
+              ]}
+            >
+              <View style={styles.buttonContent}>
+                <MaterialCommunityIcons
+                  name="trash-can-outline"
+                  size={20}
+                  color="#c87868"
+                  style={isRTL && { marginLeft: 12 }}
+                />
+                <View style={isRTL ? { marginRight: 12 } : { marginLeft: 12 }}>
+                  <Text style={[styles.buttonLabel, { color: "#c87868" }]}>
+                    {isClearing ? t("clearing") : t("clearAllData")}
                   </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                  <Text style={[styles.buttonDesc, { color: colors.mutedForeground }]}>
+                    {t("clearAllDataDesc")}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -501,5 +661,27 @@ const styles = StyleSheet.create({
   segmentText: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
+  },
+  dataButton: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  buttonLabel: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 2,
+  },
+  buttonDesc: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
   },
 });

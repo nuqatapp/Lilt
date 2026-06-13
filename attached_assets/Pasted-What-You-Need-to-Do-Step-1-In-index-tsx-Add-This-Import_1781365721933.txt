@@ -1,0 +1,355 @@
+What You Need to Do
+Step 1: In index.tsx, Add This Import at the Top
+After line 22, add:
+typescriptimport { exportData, importData, clearAllData } from "@/utils/DataBackup";
+
+Step 2: Replace SettingsModal (Lines 35-131)
+Delete lines 35-131 (the entire old SettingsModal function)
+Paste this NEW code:
+typescript// ── Settings Modal ────────────────────────────────────────────────────────────
+function SettingsModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const colors = useColors();
+  const { language, theme, isRTL, setLanguage, setTheme, t } = useSettings();
+  const [isExporting, setIsExporting] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+
+  type LangOption = { value: Language; label: string };
+  type ThemeOption = { value: Theme; label: string; icon: string };
+
+  const langOptions: LangOption[] = [
+    { value: "en", label: "English" },
+    { value: "ar", label: "عربي" },
+  ];
+
+  const themeOptions: ThemeOption[] = [
+    { value: "light", label: t("light"), icon: "weather-sunny" },
+    { value: "dark",  label: t("dark"),  icon: "weather-night" },
+  ];
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    const result = await exportData(t);
+    setIsExporting(false);
+
+    if (result.success) {
+      Alert.alert(
+        t("exportSuccess"),
+        t("exportSuccess"),
+        [{ text: t("cancel"), onPress: () => {} }]
+      );
+    } else {
+      Alert.alert(
+        t("exportError"),
+        result.message,
+        [{ text: "OK", onPress: () => {} }]
+      );
+    }
+  };
+
+  const handleImport = () => {
+    Alert.prompt(
+      t("importData"),
+      "Paste your backup JSON here",
+      [
+        { text: t("cancel"), onPress: () => {}, style: "cancel" },
+        {
+          text: "Restore",
+          onPress: async (jsonString) => {
+            if (!jsonString || jsonString.trim().length === 0) {
+              Alert.alert(t("importError"), t("importError"));
+              return;
+            }
+
+            const result = await importData(jsonString, t);
+            if (result.success) {
+              Alert.alert(
+                t("importSuccess"),
+                t("importSuccess"),
+                [{ text: "OK", onPress: () => onClose() }]
+              );
+            } else {
+              Alert.alert(
+                t("importError"),
+                result.message,
+                [{ text: "OK" }]
+              );
+            }
+          },
+          style: "default",
+        },
+      ],
+      "plain-text"
+    );
+  };
+
+  const handleClearAll = () => {
+    Alert.alert(
+      t("clearConfirm"),
+      t("clearConfirmMessage"),
+      [
+        { text: t("cancel"), onPress: () => {}, style: "cancel" },
+        {
+          text: t("deleteAll"),
+          onPress: async () => {
+            setIsClearing(true);
+            const result = await clearAllData(t);
+            setIsClearing(false);
+
+            if (result.success) {
+              Alert.alert(
+                t("clearSuccess"),
+                "The app will need to be restarted",
+                [{ text: "OK", onPress: () => onClose() }]
+              );
+            } else {
+              Alert.alert(
+                t("exportError"),
+                result.message,
+                [{ text: "OK" }]
+              );
+            }
+          },
+          style: "destructive",
+        },
+      ]
+    );
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={true}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
+            {/* Header */}
+            <View style={[styles.settingsHeader, isRTL && styles.rowReverse]}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                {t("settings")}
+              </Text>
+              <Pressable onPress={onClose} hitSlop={10}>
+                <MaterialCommunityIcons
+                  name="close"
+                  size={22}
+                  color={colors.mutedForeground}
+                />
+              </Pressable>
+            </View>
+
+            {/* Language Section */}
+            <Text
+              style={[
+                styles.settingsSection,
+                { color: colors.mutedForeground },
+                isRTL && styles.textRight,
+              ]}
+            >
+              {t("language")}
+            </Text>
+            <View style={[styles.segmented, { backgroundColor: colors.background }]}>
+              {langOptions.map((opt) => {
+                const active = language === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => setLanguage(opt.value)}
+                    style={[
+                      styles.segment,
+                      active && { backgroundColor: colors.primary },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        { color: active ? "#fff" : colors.mutedForeground },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Theme Section */}
+            <Text
+              style={[
+                styles.settingsSection,
+                { color: colors.mutedForeground },
+                isRTL && styles.textRight,
+              ]}
+            >
+              {t("theme")}
+            </Text>
+            <View style={[styles.segmented, { backgroundColor: colors.background }]}>
+              {themeOptions.map((opt) => {
+                const active = theme === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => setTheme(opt.value)}
+                    style={[
+                      styles.segment,
+                      styles.themeSegment,
+                      active && { backgroundColor: colors.primary },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={opt.icon as any}
+                      size={18}
+                      color={active ? "#fff" : colors.mutedForeground}
+                    />
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        { color: active ? "#fff" : colors.mutedForeground, marginLeft: 6 },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Data Management Section (NEW) */}
+            <Text
+              style={[
+                styles.settingsSection,
+                { color: colors.mutedForeground, marginTop: 24 },
+                isRTL && styles.textRight,
+              ]}
+            >
+              {t("dataManagement")}
+            </Text>
+
+            {/* Export Data Button */}
+            <Pressable
+              onPress={handleExport}
+              disabled={isExporting}
+              style={[
+                styles.dataButton,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.primary,
+                  opacity: isExporting ? 0.6 : 1,
+                },
+                isRTL && styles.rowReverse,
+              ]}
+            >
+              <View style={styles.buttonContent}>
+                <MaterialCommunityIcons
+                  name="download"
+                  size={20}
+                  color={colors.primary}
+                  style={isRTL && { marginLeft: 12 }}
+                />
+                <View style={isRTL ? { marginRight: 12 } : { marginLeft: 12 }}>
+                  <Text style={[styles.buttonLabel, { color: colors.foreground }]}>
+                    {isExporting ? t("exporting") : t("exportData")}
+                  </Text>
+                  <Text style={[styles.buttonDesc, { color: colors.mutedForeground }]}>
+                    {t("exportDataDesc")}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+
+            {/* Restore/Import Button */}
+            <Pressable
+              onPress={handleImport}
+              style={[
+                styles.dataButton,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.primary,
+                },
+                isRTL && styles.rowReverse,
+              ]}
+            >
+              <View style={styles.buttonContent}>
+                <MaterialCommunityIcons
+                  name="upload"
+                  size={20}
+                  color={colors.primary}
+                  style={isRTL && { marginLeft: 12 }}
+                />
+                <View style={isRTL ? { marginRight: 12 } : { marginLeft: 12 }}>
+                  <Text style={[styles.buttonLabel, { color: colors.foreground }]}>
+                    {t("importData")}
+                  </Text>
+                  <Text style={[styles.buttonDesc, { color: colors.mutedForeground }]}>
+                    {t("importDataDesc")}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+
+            {/* Clear All Data Button */}
+            <Pressable
+              onPress={handleClearAll}
+              disabled={isClearing}
+              style={[
+                styles.dataButton,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: "#c87868",
+                  opacity: isClearing ? 0.6 : 1,
+                },
+                isRTL && styles.rowReverse,
+              ]}
+            >
+              <View style={styles.buttonContent}>
+                <MaterialCommunityIcons
+                  name="trash-can-outline"
+                  size={20}
+                  color="#c87868"
+                  style={isRTL && { marginLeft: 12 }}
+                />
+                <View style={isRTL ? { marginRight: 12 } : { marginLeft: 12 }}>
+                  <Text style={[styles.buttonLabel, { color: "#c87868" }]}>
+                    {isClearing ? t("clearing") : t("clearAllData")}
+                  </Text>
+                  <Text style={[styles.buttonDesc, { color: colors.mutedForeground }]}>
+                    {t("clearAllDataDesc")}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+Step 3: Add New Styles
+At the bottom of the styles object (before the closing }), add:
+typescript  // Data Management Buttons
+  dataButton: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  buttonLabel: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 2,
+  },
+  buttonDesc: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+
+Step 4: Make Sure DataBackup.ts Has Content
+Check that artifacts/daily-tracker/utils/DataBackup.ts is NOT empty. If it is, paste the content from the DataBackup.ts file I created.
